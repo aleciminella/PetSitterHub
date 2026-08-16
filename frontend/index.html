@@ -28,10 +28,41 @@
         <h1>PetSitterHub</h1>
         <p>Trova pet-sitter e dog-walker nella tua zona.</p>
     </header>
-    <main>
-        <section>
-            <h2>Ricerca sitter</h2>
-            <p>Qui verra inserito il catalogo dei pet-sitter disponibili.</p>
+    <main class="container my-5">
+        <section class="search-section">
+            <h2 class="mb-4">Ricerca sitter</h2>
+            <form class="row g-3" id="searchForm">
+                <div class="col-md-3">
+                    <label for="city" class="form-label">Citta</label>
+                    <input type="text" class="form-control" id="city" placeholder="Es. Roma">
+                </div>
+                <div class="col-md-3">
+                    <label for="petType" class="form-label">Animale</label>
+                    <select class="form-select" id="petType">
+                        <option value="">Seleziona</option>
+                        <option value="dog">Cane</option>
+                        <option value="cat">Gatto</option>
+                        <option value="other">Altro</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="service" class="form-label">Servizio</label>
+                    <select class="form-select" id="service">
+                        <option value="">Seleziona</option>
+                        <option value="walk">Passeggiata</option>
+                        <option value="home">Pet-sitting a domicilio</option>
+                        <option value="boarding">Pensione</option>
+                        <option value="grooming">Toelettatura base</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="date" class="form-label">Data</label>
+                    <input type="date" class="form-control" id="date">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Cerca</button>
+                </div>
+            </form>
         </section>
     </main>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
