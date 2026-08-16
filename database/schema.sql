@@ -55,3 +55,31 @@ create table bookings (
   created_at timestamptz not null default now(),
   check (ends_at > starts_at)
 );
+
+create table messages (
+  id bigserial primary key,
+  booking_id bigint not null references bookings(id) on delete cascade,
+  sender_id bigint not null references users(id),
+  body text not null,
+  sent_at timestamptz not null default now()
+);
+
+create table reviews (
+  id bigserial primary key,
+  booking_id bigint not null unique references bookings(id) on delete cascade,
+  owner_id bigint not null references users(id),
+  sitter_id bigint not null references sitter_profiles(id),
+  rating integer not null check (rating between 1 and 5),
+  comment text,
+  created_at timestamptz not null default now()
+);
+
+create table payments (
+  id bigserial primary key,
+  booking_id bigint not null unique references bookings(id) on delete cascade,
+  amount numeric(10, 2) not null check (amount >= 0),
+  status varchar(30) not null default 'simulated'
+    check (status in ('simulated', 'authorized', 'paid', 'refunded', 'failed')),
+  provider_reference varchar(120),
+  created_at timestamptz not null default now()
+);
