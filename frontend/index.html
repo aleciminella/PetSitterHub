@@ -1,24 +1,41 @@
 <!DOCTYPE html>
-<html lang="it"> 
-<head>   
-    <meta charset="UTF-8">   
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">   
-    <title>PetSitterHub</title>   
-    <link rel="stylesheet" href="css/style.css"> 
-</head> 
-<body>   
-    <header>     
-        <h1>PetSitterHub</h1>     
-        <p>Trova pet-sitter e dog-walker nella tua zona.</p>   
-    </header> 
-    
-    <main>     
-        <section>       
-            <h2>Ricerca sitter</h2>       
-            <p>Qui verra inserito il catalogo dei pet-sitter disponibili.</p>     
-        </section>   
-    </main> 
-
-    <script src="js/app.js"></script> 
-</body> 
-</html> 
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetSitterHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-white border-bottom">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">PetSitterHub</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="#">Cerca sitter</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Come funziona</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Login</a></li>
+                    <li class="nav-item"><a class="btn btn-primary ms-lg-2" href="#">Registrati</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <header>
+        <h1>PetSitterHub</h1>
+        <p>Trova pet-sitter e dog-walker nella tua zona.</p>
+    </header>
+    <main>
+        <section>
+            <h2>Ricerca sitter</h2>
+            <p>Qui verra inserito il catalogo dei pet-sitter disponibili.</p>
+        </section>
+    </main>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
