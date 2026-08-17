@@ -42,10 +42,46 @@ async function register(req, res, next) {
   }
 }
 
-function login(req, res) {
-  res.status(501).json({
-    error: "Login endpoint non ancora implementato"
-  });
+async function login(req, res, next) {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        error: "Mancano email o password"
+      });
+    }
+
+    const result = await pool.query(
+      `select id, email, password_hash, first_name, last_name, role, phone, city, created_at
+       from users
+       where email = $1`,
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        error: "Credenziali non valide"
+      });
+    }
+
+    const user = result.rows[0];
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatches) {
+      return res.status(401).json({
+        error: "Credenziali non valide"
+      });
+    }
+
+    delete user.password_hash;
+
+    return res.json({
+      user
+    });
+  } catch (err) {
+    return next(err);
+  }
 }
 
 module.exports = {
