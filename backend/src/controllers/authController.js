@@ -42,6 +42,13 @@ async function register(req, res, next) {
   }
 }
 
+function login(req, res) {
+  res.status(501).json({
+    error: "Login endpoint non ancora implementato"
+  });
+}
+
 module.exports = {
+  login,
   register
 };
