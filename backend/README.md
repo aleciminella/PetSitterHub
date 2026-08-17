@@ -87,3 +87,26 @@ Risposte principali:
 400 campi mancanti o ruolo non valido
 409 email già registrata
 ```
+
+Login utente:
+
+```text
+POST http://localhost:3000/api/auth/login
+```
+
+Body JSON:
+
+```json
+{
+  "email": "mario.rossi@example.com",
+  "password": "password123"
+}
+```
+
+Risposte principali:
+
+```text
+200 login riuscito
+400 email o password mancanti
+401 credenziali non valide
+```
