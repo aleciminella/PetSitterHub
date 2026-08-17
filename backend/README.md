@@ -171,3 +171,38 @@ Risposta:
   ]
 }
 ```
+
+## Test manuali catalogo
+
+Se nel file `.env` viene usata una porta diversa da `3000`, sostituire la porta negli esempi.
+
+Servizi:
+
+```bash
+curl http://localhost:3000/api/services
+```
+
+Elenco sitter:
+
+```bash
+curl http://localhost:3000/api/sitters
+```
+
+Filtro per città:
+
+```bash
+curl "http://localhost:3000/api/sitters?city=Roma"
+```
+
+Filtro per servizio:
+
+```bash
+curl "http://localhost:3000/api/sitters?service=Passeggiata"
+```
+
+Account sitter demo:
+
+```text
+giulia.sitter@example.com / password123
+luca.sitter@example.com / password123
+```
