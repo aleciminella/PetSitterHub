@@ -110,3 +110,64 @@ Risposte principali:
 400 email o password mancanti
 401 credenziali non valide
 ```
+
+## Servizi
+
+Elenco servizi disponibili:
+
+```text
+GET http://localhost:3000/api/services
+```
+
+Risposta:
+
+```json
+{
+  "services": [
+    {
+      "id": "1",
+      "name": "Passeggiata",
+      "description": "Passeggiata per cani di durata concordata."
+    }
+  ]
+}
+```
+
+## Sitter
+
+Elenco sitter:
+
+```text
+GET http://localhost:3000/api/sitters
+```
+
+Filtri disponibili:
+
+```text
+GET http://localhost:3000/api/sitters?city=Roma
+GET http://localhost:3000/api/sitters?service=Passeggiata
+```
+
+Risposta:
+
+```json
+{
+  "sitters": [
+    {
+      "id": "1",
+      "bio": "Mi occupo di cani e gatti con esperienza e attenzione.",
+      "base_city": "Roma",
+      "verified": true,
+      "first_name": "Giulia",
+      "last_name": "Bianchi",
+      "services": [
+        {
+          "id": 1,
+          "name": "Passeggiata",
+          "price": 12
+        }
+      ]
+    }
+  ]
+}
+```
