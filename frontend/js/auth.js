@@ -17,9 +17,23 @@ function redirectToHome() {
     }, 800);
 }
 
+function setFormLoading(form, isLoading) {
+    const button = form.find("button[type='submit']");
+    const defaultText = button.data("default-text");
+    button.prop("disabled", isLoading);
+    button.text(isLoading ? "Attendere..." : defaultText);
+}
+
 $(document).ready(function () {
+    $("button[type='submit']").each(function () {
+        $(this).data("default-text", $(this).text());
+    });
+
     $("#registerForm").on("submit", function (event) {
         event.preventDefault();
+
+        const form = $(this);
+        setFormLoading(form, true);
 
         const userData = {
             firstName: $("#firstName").val(),
@@ -44,12 +58,18 @@ $(document).ready(function () {
             error: function (xhr) {
                 const message = xhr.responseJSON?.error || "Errore durante la registrazione.";
                 showMessage("danger", message);
+            },
+            complete: function () {
+                setFormLoading(form, false);
             }
         });
     });
 
     $("#loginForm").on("submit", function (event) {
         event.preventDefault();
+
+        const form = $(this);
+        setFormLoading(form, true);
 
         const loginData = {
             email: $("#loginEmail").val(),
@@ -69,6 +89,9 @@ $(document).ready(function () {
             error: function (xhr) {
                 const message = xhr.responseJSON?.error || "Errore durante il login.";
                 showMessage("danger", message);
+            },
+            complete: function () {
+                setFormLoading(form, false);
             }
         });
     });
