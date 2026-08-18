@@ -6,6 +6,7 @@ insert into services (name, description) values
 on conflict (name) do nothing;
 
 insert into users (email, password_hash, first_name, last_name, role, phone, city) values
+  ('mario.owner@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Mario', 'Rossi', 'owner', '3331234567', 'Roma'),
   ('giulia.sitter@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Giulia', 'Bianchi', 'sitter', '3331112222', 'Roma'),
   ('luca.sitter@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Luca', 'Verdi', 'sitter', '3334445555', 'Milano')
 on conflict (email) do update set
@@ -15,6 +16,26 @@ on conflict (email) do update set
   role = excluded.role,
   phone = excluded.phone,
   city = excluded.city;
+
+insert into pets (owner_id, name, species, breed, age, notes)
+select id, 'Luna', 'cane', 'Labrador', 4, 'Ama le passeggiate lunghe.'
+from users
+where email = 'mario.owner@example.com'
+on conflict (owner_id, name) do update set
+  species = excluded.species,
+  breed = excluded.breed,
+  age = excluded.age,
+  notes = excluded.notes;
+
+insert into pets (owner_id, name, species, breed, age, notes)
+select id, 'Milo', 'gatto', 'Europeo', 2, 'Diffidente con persone nuove.'
+from users
+where email = 'mario.owner@example.com'
+on conflict (owner_id, name) do update set
+  species = excluded.species,
+  breed = excluded.breed,
+  age = excluded.age,
+  notes = excluded.notes;
 
 insert into sitter_profiles (user_id, bio, base_city, verified)
 select id, 'Mi occupo di cani e gatti con esperienza e attenzione.', city, true

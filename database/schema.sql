@@ -32,6 +32,18 @@ create table sitter_services (
   primary key (sitter_id, service_id)
 );
 
+create table pets (
+  id bigserial primary key,
+  owner_id bigint not null references users(id) on delete cascade,
+  name varchar(100) not null,
+  species varchar(50) not null,
+  breed varchar(100),
+  age integer check (age >= 0),
+  notes text,
+  created_at timestamptz not null default now(),
+  unique (owner_id, name)
+);
+
 create table availability_slots (
   id bigserial primary key,
   sitter_id bigint not null references sitter_profiles(id) on delete cascade,
