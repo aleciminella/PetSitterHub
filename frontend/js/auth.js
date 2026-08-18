@@ -11,6 +11,12 @@ function saveUser(user) {
     localStorage.setItem("petsitterhubUser", JSON.stringify(user));
 }
 
+function redirectToHome() {
+    setTimeout(function () {
+        window.location.href = "../index.html";
+    }, 800);
+}
+
 $(document).ready(function () {
     $("#registerForm").on("submit", function (event) {
         event.preventDefault();
@@ -33,6 +39,7 @@ $(document).ready(function () {
             success: function (response) {
                 saveUser(response.user);
                 showMessage("success", "Registrazione completata.");
+                redirectToHome();
             },
             error: function (xhr) {
                 const message = xhr.responseJSON?.error || "Errore durante la registrazione.";
@@ -57,6 +64,7 @@ $(document).ready(function () {
             success: function (response) {
                 saveUser(response.user);
                 showMessage("success", "Login effettuato.");
+                redirectToHome();
             },
             error: function (xhr) {
                 const message = xhr.responseJSON?.error || "Errore durante il login.";
