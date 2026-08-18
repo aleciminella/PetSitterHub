@@ -16,11 +16,12 @@
             </button>
             <div class="collapse navbar-collapse" id="mainNavbar">
                 <ul class="navbar-nav ms-auto align-items-lg-center">
-                    <li class="nav-item"><a class="nav-link" href="#">Cerca sitter</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Come funziona</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Login</a></li>
-                    <li class="nav-item"><a class="btn btn-primary ms-lg-2" href="#">Registrati</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#search">Cerca sitter</a></li>
                 </ul>
+                <div id="navbarActions" class="d-flex gap-2 ms-lg-3">
+                    <a class="btn btn-outline-primary" href="pages/login.html">Login</a>
+                    <a class="btn btn-primary" href="pages/register.html">Registrati</a>
+                </div>
             </div>
         </div>
     </nav>
@@ -29,7 +30,7 @@
         <p>Trova pet-sitter e dog-walker nella tua zona.</p>
     </header>
     <main class="container my-5">
-        <section class="search-section">
+        <section class="search-section" id="search">
             <h2 class="mb-4">Ricerca sitter</h2>
             <form class="row g-3" id="searchForm">
                 <div class="col-md-3">
