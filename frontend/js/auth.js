@@ -1,3 +1,16 @@
+const API_BASE_URL = "http://localhost:3000/api";
+
+function showMessage(type, text) {
+    $("#authMessage")
+        .removeClass("d-none alert-success alert-danger")
+        .addClass(`alert-${type}`)
+        .text(text);
+}
+
+function saveUser(user) {
+    localStorage.setItem("petsitterhubUser", JSON.stringify(user));
+}
+
 $(document).ready(function () {
     $("#registerForm").on("submit", function (event) {
         event.preventDefault();
@@ -12,7 +25,20 @@ $(document).ready(function () {
             phone: $("#phone").val()
         };
 
-        console.log("Dati registrazione:", userData);
+        $.ajax({
+            url: `${API_BASE_URL}/auth/register`,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(userData),
+            success: function (response) {
+                saveUser(response.user);
+                showMessage("success", "Registrazione completata.");
+            },
+            error: function (xhr) {
+                const message = xhr.responseJSON?.error || "Errore durante la registrazione.";
+                showMessage("danger", message);
+            }
+        });
     });
 
     $("#loginForm").on("submit", function (event) {
@@ -23,6 +49,19 @@ $(document).ready(function () {
             password: $("#loginPassword").val()
         };
 
-        console.log("Dati login:", loginData);
+        $.ajax({
+            url: `${API_BASE_URL}/auth/login`,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(loginData),
+            success: function (response) {
+                saveUser(response.user);
+                showMessage("success", "Login effettuato.");
+            },
+            error: function (xhr) {
+                const message = xhr.responseJSON?.error || "Errore durante il login.";
+                showMessage("danger", message);
+            }
+        });
     });
 });
