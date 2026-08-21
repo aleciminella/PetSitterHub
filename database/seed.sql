@@ -1,9 +1,12 @@
-insert into services (name, description) values
-  ('Passeggiata', 'Passeggiata per cani di durata concordata.'),
-  ('Pet-sitting a domicilio', 'Cura dell animale presso la casa del proprietario.'),
-  ('Pensione', 'Ospitalità temporanea presso il sitter.'),
-  ('Toelettatura base', 'Servizio base di igiene e cura del pelo.')
-on conflict (name) do nothing;
+insert into services (name, description, price_unit, availability_mode) values
+  ('Passeggiata', 'Uscita con il cane per una durata concordata.', 'hourly', 'hourly_slot'),
+  ('Pet-sitting a domicilio', 'Assistenza dell''animale presso la casa del proprietario.', 'daily', 'daily_non_exclusive'),
+  ('Pensione', 'Ospitalità temporanea dell''animale presso il sitter.', 'daily', 'daily_exclusive'),
+  ('Toelettatura base', 'Igiene leggera e cura semplice del pelo.', 'fixed', 'fixed_slot')
+on conflict (name) do update set
+  description = excluded.description,
+  price_unit = excluded.price_unit,
+  availability_mode = excluded.availability_mode;
 
 insert into users (email, password_hash, first_name, last_name, role, phone, city) values
   ('mario.owner@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Mario', 'Rossi', 'owner', '3331234567', 'Roma'),

@@ -22,7 +22,11 @@ create table sitter_profiles (
 create table services (
   id bigserial primary key,
   name varchar(100) not null unique,
-  description text
+  description text,
+  price_unit varchar(20) not null default 'hourly'
+    check (price_unit in ('hourly', 'daily', 'fixed')),
+  availability_mode varchar(30) not null default 'hourly_slot'
+    check (availability_mode in ('hourly_slot', 'fixed_slot', 'daily_exclusive', 'daily_non_exclusive'))
 );
 
 create table sitter_services (
