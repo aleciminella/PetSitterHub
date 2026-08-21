@@ -15,94 +15,44 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainNavbar">
-                <ul class="navbar-nav ms-auto align-items-lg-center">
+                <ul class="navbar-nav ms-auto align-items-lg-center" id="mainNavbarLinks">
                     <li class="nav-item"><a class="nav-link" href="#search">Cerca sitter</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/services.html">Servizi</a></li>
                 </ul>
-                <div id="navbarActions" class="d-flex gap-2 ms-lg-3">
-                    <a class="btn btn-outline-primary" href="pages/login.html">Login</a>
-                    <a class="btn btn-primary" href="pages/register.html">Registrati</a>
-                </div>
+                <div id="navbarActions" class="d-flex gap-2 ms-lg-3"></div>
             </div>
         </div>
     </nav>
-    <header>
-        <h1>PetSitterHub</h1>
-        <p>Trova pet-sitter e dog-walker nella tua zona.</p>
+    <header class="hero">
+        <div class="container">
+            <h1>PetSitterHub</h1>
+            <p>Trova pet-sitter e dog-walker nella tua zona.</p>
+            <a class="btn btn-light" href="#search">Cerca un sitter</a>
+        </div>
     </header>
     <main class="container my-5">
         <section class="search-section" id="search">
             <h2 class="mb-4">Ricerca sitter</h2>
             <form class="row g-3" id="searchForm">
-                <div class="col-md-3">
-                    <label for="city" class="form-label">Citta</label>
+                <div class="col-md-6">
+                    <label for="city" class="form-label">Città</label>
                     <input type="text" class="form-control" id="city" placeholder="Es. Roma">
                 </div>
-                <div class="col-md-3">
-                    <label for="petType" class="form-label">Animale</label>
-                    <select class="form-select" id="petType">
-                        <option value="">Seleziona</option>
-                        <option value="dog">Cane</option>
-                        <option value="cat">Gatto</option>
-                        <option value="other">Altro</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <label for="service" class="form-label">Servizio</label>
                     <select class="form-select" id="service">
-                        <option value="">Seleziona</option>
-                        <option value="walk">Passeggiata</option>
-                        <option value="home">Pet-sitting a domicilio</option>
-                        <option value="boarding">Pensione</option>
-                        <option value="grooming">Toelettatura base</option>
+                        <option value="">Tutti i servizi</option>
                     </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="date" class="form-label">Data</label>
-                    <input type="date" class="form-control" id="date">
                 </div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Cerca</button>
+                    <button type="button" class="btn btn-outline-secondary ms-2" id="resetFilters">Reset filtri</button>
                 </div>
             </form>
         </section>
-
         <section class="mt-5">
             <h2 class="mb-4">Sitter disponibili</h2>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <article class="card h-100">
-                        <div class="card-body">
-                            <h3 class="h5 card-title">Giulia Rossi</h3>
-                            <p class="card-text text-muted">Roma - Passeggiata, pet-sitting</p>
-                            <p class="card-text">Da 15 euro/ora</p>
-                            <p class="card-text">Valutazione: 4.8/5</p>
-                            <a href="#" class="btn btn-outline-primary">Vedi profilo</a>
-                        </div>
-                    </article>
-                </div>
-                <div class="col-md-4">
-                    <article class="card h-100">
-                        <div class="card-body">
-                            <h3 class="h5 card-title">Marco Bianchi</h3>
-                            <p class="card-text text-muted">Milano - Pensione, passeggiata</p>
-                            <p class="card-text">Da 20 euro/ora</p>
-                            <p class="card-text">Valutazione: 4.6/5</p>
-                            <a href="#" class="btn btn-outline-primary">Vedi profilo</a>
-                        </div>
-                    </article>
-                </div>
-                <div class="col-md-4">
-                    <article class="card h-100">
-                        <div class="card-body">
-                            <h3 class="h5 card-title">Sara Verdi</h3>
-                            <p class="card-text text-muted">Torino - Gatti, pet-sitting</p>
-                            <p class="card-text">Da 12 euro/ora</p>
-                            <p class="card-text">Valutazione: 4.9/5</p>
-                            <a href="#" class="btn btn-outline-primary">Vedi profilo</a>
-                        </div>
-                    </article>
-                </div>
-            </div>
+            <div class="row g-4" id="sittersList"></div>
         </section>
     </main>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
