@@ -44,8 +44,11 @@ create table sitter_pet_types (
 create table sitter_services (
   sitter_id bigint not null references sitter_profiles(id) on delete cascade,
   service_id bigint not null references services(id) on delete cascade,
+  pet_type varchar(50) not null,
   price numeric(10, 2) not null check (price >= 0),
-  primary key (sitter_id, service_id)
+  primary key (sitter_id, service_id, pet_type),
+  foreign key (service_id, pet_type) references service_pet_types(service_id, pet_type),
+  foreign key (sitter_id, pet_type) references sitter_pet_types(sitter_id, pet_type)
 );
 
 create table pets (

@@ -85,26 +85,34 @@ join (
 ) as accepted_pet(email, pet_type) on accepted_pet.email = u.email
 on conflict (sitter_id, pet_type) do nothing;
 
-insert into sitter_services (sitter_id, service_id, price)
-select sp.id, s.id, 12.00
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'cane', 12.00
 from sitter_profiles sp
 join users u on u.id = sp.user_id
 join services s on s.name = 'Passeggiata'
 where u.email = 'giulia.sitter@example.com'
-on conflict (sitter_id, service_id) do nothing;
+on conflict (sitter_id, service_id, pet_type) do nothing;
 
-insert into sitter_services (sitter_id, service_id, price)
-select sp.id, s.id, 25.00
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'cane', 25.00
 from sitter_profiles sp
 join users u on u.id = sp.user_id
 join services s on s.name = 'Pet-sitting a domicilio'
 where u.email = 'giulia.sitter@example.com'
-on conflict (sitter_id, service_id) do nothing;
+on conflict (sitter_id, service_id, pet_type) do nothing;
 
-insert into sitter_services (sitter_id, service_id, price)
-select sp.id, s.id, 10.00
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'gatto', 22.00
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join services s on s.name = 'Pet-sitting a domicilio'
+where u.email = 'giulia.sitter@example.com'
+on conflict (sitter_id, service_id, pet_type) do nothing;
+
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'cane', 10.00
 from sitter_profiles sp
 join users u on u.id = sp.user_id
 join services s on s.name = 'Passeggiata'
 where u.email = 'luca.sitter@example.com'
-on conflict (sitter_id, service_id) do nothing;
+on conflict (sitter_id, service_id, pet_type) do nothing;
