@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const pool = require("../db/pool");
+const { createToken } = require("../middleware/authMiddleware");
 
 const allowedRoles = ["owner", "sitter", "admin"];
 
@@ -28,8 +29,11 @@ async function register(req, res, next) {
       [email, passwordHash, firstName, lastName, role, phone || null, city || null]
     );
 
+    const user = result.rows[0];
+
     return res.status(201).json({
-      user: result.rows[0]
+      user,
+      token: createToken(user)
     });
   } catch (err) {
     if (err.code === "23505") {
@@ -77,7 +81,8 @@ async function login(req, res, next) {
     delete user.password_hash;
 
     return res.json({
-      user
+      user,
+      token: createToken(user)
     });
   } catch (err) {
     return next(err);

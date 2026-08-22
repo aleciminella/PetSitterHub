@@ -28,6 +28,7 @@ Esempio:
 ```env
 PORT=3000
 DATABASE_URL=postgres://utente:password@localhost:5432/petsitterhub
+JWT_SECRET=dev-secret
 ```
 
 ## Avvio
@@ -88,6 +89,8 @@ Risposte principali:
 409 email già registrata
 ```
 
+La risposta contiene anche un token da usare nelle API protette.
+
 Login utente:
 
 ```text
@@ -110,6 +113,8 @@ Risposte principali:
 400 email o password mancanti
 401 credenziali non valide
 ```
+
+La risposta contiene anche un token da usare nelle API protette.
 
 ## Servizi
 
