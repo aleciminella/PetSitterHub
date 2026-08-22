@@ -121,6 +121,46 @@ where u.email = 'giulia.sitter@example.com'
 on conflict (sitter_id, service_id, pet_type) do nothing;
 
 insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'cane', 35.00
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join services s on s.name = 'Pensione'
+where u.email = 'giulia.sitter@example.com'
+on conflict (sitter_id, service_id, pet_type) do nothing;
+
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'gatto', 30.00
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join services s on s.name = 'Pensione'
+where u.email = 'giulia.sitter@example.com'
+on conflict (sitter_id, service_id, pet_type) do nothing;
+
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'gatto', 15.00
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join services s on s.name = 'Somministrazione acqua e cibo'
+where u.email = 'giulia.sitter@example.com'
+on conflict (sitter_id, service_id, pet_type) do nothing;
+
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'gatto', 18.00
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join services s on s.name = 'Pulizia ambiente'
+where u.email = 'giulia.sitter@example.com'
+on conflict (sitter_id, service_id, pet_type) do nothing;
+
+insert into sitter_services (sitter_id, service_id, pet_type, price)
+select sp.id, s.id, 'cane', 28.00
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join services s on s.name = 'Toelettatura base'
+where u.email = 'giulia.sitter@example.com'
+on conflict (sitter_id, service_id, pet_type) do nothing;
+
+insert into sitter_services (sitter_id, service_id, pet_type, price)
 select sp.id, s.id, 'cane', 10.00
 from sitter_profiles sp
 join users u on u.id = sp.user_id
