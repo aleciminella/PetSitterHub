@@ -1,6 +1,7 @@
 const express = require("express");
 const authRoutes = require("./routes/authRoutes");
 const healthRoutes = require("./routes/healthRoutes");
+const petRoutes = require("./routes/petRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const sitterRoutes = require("./routes/sitterRoutes");
 
@@ -22,6 +23,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/pets", petRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/sitters", sitterRoutes);
 

@@ -124,6 +124,23 @@ Elenco servizi disponibili:
 GET http://localhost:3000/api/services
 ```
 
+## Animali proprietario
+
+Elenco animali del proprietario autenticato:
+
+```text
+GET http://localhost:3000/api/pets
+Authorization: Bearer token
+```
+
+Risposte principali:
+
+```text
+200 elenco animali
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
 Risposta:
 
 ```json
