@@ -35,6 +35,12 @@ create table service_pet_types (
   primary key (service_id, pet_type)
 );
 
+create table sitter_pet_types (
+  sitter_id bigint not null references sitter_profiles(id) on delete cascade,
+  pet_type varchar(50) not null,
+  primary key (sitter_id, pet_type)
+);
+
 create table sitter_services (
   sitter_id bigint not null references sitter_profiles(id) on delete cascade,
   service_id bigint not null references services(id) on delete cascade,

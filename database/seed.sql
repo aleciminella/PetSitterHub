@@ -73,6 +73,18 @@ from users
 where email = 'luca.sitter@example.com'
 on conflict (user_id) do nothing;
 
+insert into sitter_pet_types (sitter_id, pet_type)
+select sp.id, accepted_pet.pet_type
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join (
+  values
+    ('giulia.sitter@example.com', 'cane'),
+    ('giulia.sitter@example.com', 'gatto'),
+    ('luca.sitter@example.com', 'cane')
+) as accepted_pet(email, pet_type) on accepted_pet.email = u.email
+on conflict (sitter_id, pet_type) do nothing;
+
 insert into sitter_services (sitter_id, service_id, price)
 select sp.id, s.id, 12.00
 from sitter_profiles sp
