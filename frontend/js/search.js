@@ -16,7 +16,12 @@ function serviceBadges(services) {
         return '<span class="text-muted">Nessun servizio configurato</span>';
     }
     return services.map(function (service) {
-        return `<span class="service-badge">${service.name} - ${formatPrice(service.price)}</span>`;
+        return `
+            <span class="service-badge">
+                <span>${service.name}</span>
+                <strong>${formatPrice(service.price)}</strong>
+            </span>
+        `;
     }).join("");
 }
 
