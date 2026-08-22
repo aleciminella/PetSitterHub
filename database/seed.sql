@@ -8,6 +8,27 @@ on conflict (name) do update set
   price_unit = excluded.price_unit,
   availability_mode = excluded.availability_mode;
 
+insert into service_pet_types (service_id, pet_type)
+select s.id, supported_pet.pet_type
+from services s
+join (
+  values
+    ('Passeggiata', 'cane'),
+    ('Pet-sitting a domicilio', 'cane'),
+    ('Pet-sitting a domicilio', 'gatto'),
+    ('Pet-sitting a domicilio', 'uccello'),
+    ('Pet-sitting a domicilio', 'roditore'),
+    ('Pet-sitting a domicilio', 'rettile'),
+    ('Pensione', 'cane'),
+    ('Pensione', 'gatto'),
+    ('Pensione', 'uccello'),
+    ('Pensione', 'roditore'),
+    ('Pensione', 'rettile'),
+    ('Toelettatura base', 'cane'),
+    ('Toelettatura base', 'gatto')
+) as supported_pet(service_name, pet_type) on supported_pet.service_name = s.name
+on conflict (service_id, pet_type) do nothing;
+
 insert into users (email, password_hash, first_name, last_name, role, phone, city) values
   ('mario.owner@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Mario', 'Rossi', 'owner', '3331234567', 'Roma'),
   ('giulia.sitter@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Giulia', 'Bianchi', 'sitter', '3331112222', 'Roma'),
