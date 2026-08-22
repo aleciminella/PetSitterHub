@@ -22,14 +22,45 @@ create table sitter_profiles (
 create table services (
   id bigserial primary key,
   name varchar(100) not null unique,
-  description text
+  description text,
+  price_unit varchar(20) not null default 'hourly'
+    check (price_unit in ('hourly', 'daily', 'fixed')),
+  availability_mode varchar(30) not null default 'hourly_slot'
+    check (availability_mode in ('hourly_slot', 'fixed_slot', 'daily_exclusive', 'daily_non_exclusive'))
+);
+
+create table service_pet_types (
+  service_id bigint not null references services(id) on delete cascade,
+  pet_type varchar(50) not null,
+  primary key (service_id, pet_type)
+);
+
+create table sitter_pet_types (
+  sitter_id bigint not null references sitter_profiles(id) on delete cascade,
+  pet_type varchar(50) not null,
+  primary key (sitter_id, pet_type)
 );
 
 create table sitter_services (
   sitter_id bigint not null references sitter_profiles(id) on delete cascade,
   service_id bigint not null references services(id) on delete cascade,
+  pet_type varchar(50) not null,
   price numeric(10, 2) not null check (price >= 0),
-  primary key (sitter_id, service_id)
+  primary key (sitter_id, service_id, pet_type),
+  foreign key (service_id, pet_type) references service_pet_types(service_id, pet_type),
+  foreign key (sitter_id, pet_type) references sitter_pet_types(sitter_id, pet_type)
+);
+
+create table pets (
+  id bigserial primary key,
+  owner_id bigint not null references users(id) on delete cascade,
+  name varchar(100) not null,
+  species varchar(50) not null,
+  breed varchar(100),
+  age integer check (age >= 0),
+  notes text,
+  created_at timestamptz not null default now(),
+  unique (owner_id, name)
 );
 
 create table availability_slots (
