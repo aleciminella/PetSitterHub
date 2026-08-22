@@ -2,6 +2,8 @@ insert into services (name, description, price_unit, availability_mode) values
   ('Passeggiata', 'Uscita con il cane per una durata concordata.', 'hourly', 'hourly_slot'),
   ('Pet-sitting a domicilio', 'Assistenza dell''animale presso la casa del proprietario.', 'daily', 'daily_non_exclusive'),
   ('Pensione', 'Ospitalità temporanea dell''animale presso il sitter.', 'daily', 'daily_exclusive'),
+  ('Somministrazione acqua e cibo', 'Gestione quotidiana di acqua, cibo e piccole attenzioni.', 'daily', 'daily_non_exclusive'),
+  ('Pulizia ambiente', 'Pulizia dello spazio usato dall''animale.', 'daily', 'daily_non_exclusive'),
   ('Toelettatura base', 'Igiene leggera e cura semplice del pelo.', 'fixed', 'fixed_slot')
 on conflict (name) do update set
   description = excluded.description,
@@ -24,6 +26,15 @@ join (
     ('Pensione', 'uccello'),
     ('Pensione', 'roditore'),
     ('Pensione', 'rettile'),
+    ('Somministrazione acqua e cibo', 'cane'),
+    ('Somministrazione acqua e cibo', 'gatto'),
+    ('Somministrazione acqua e cibo', 'uccello'),
+    ('Somministrazione acqua e cibo', 'roditore'),
+    ('Somministrazione acqua e cibo', 'rettile'),
+    ('Pulizia ambiente', 'gatto'),
+    ('Pulizia ambiente', 'uccello'),
+    ('Pulizia ambiente', 'roditore'),
+    ('Pulizia ambiente', 'rettile'),
     ('Toelettatura base', 'cane'),
     ('Toelettatura base', 'gatto')
 ) as supported_pet(service_name, pet_type) on supported_pet.service_name = s.name
