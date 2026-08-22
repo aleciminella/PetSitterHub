@@ -69,3 +69,27 @@ main {
     background-color: white;
     color: #6c757d;
 }
+.sitter-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    flex: 0 0 64px;
+}
+
+.sitter-bio {
+    min-height: 72px;
+    color: #495057;
+}
+
+.service-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
