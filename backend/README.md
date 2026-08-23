@@ -28,6 +28,7 @@ Esempio:
 ```env
 PORT=3000
 DATABASE_URL=postgres://utente:password@localhost:5432/petsitterhub
+JWT_SECRET=dev-secret
 ```
 
 ## Avvio
@@ -88,6 +89,8 @@ Risposte principali:
 409 email già registrata
 ```
 
+La risposta contiene anche un token da usare nelle API protette.
+
 Login utente:
 
 ```text
@@ -111,12 +114,106 @@ Risposte principali:
 401 credenziali non valide
 ```
 
+La risposta contiene anche un token da usare nelle API protette.
+
 ## Servizi
 
 Elenco servizi disponibili:
 
 ```text
 GET http://localhost:3000/api/services
+```
+
+## Animali proprietario
+
+Elenco animali del proprietario autenticato:
+
+```text
+GET http://localhost:3000/api/pets
+Authorization: Bearer token
+```
+
+Risposte principali:
+
+```text
+200 elenco animali
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
+Aggiunta animale:
+
+```text
+POST http://localhost:3000/api/pets
+Authorization: Bearer token
+```
+
+Body JSON:
+
+```json
+{
+  "name": "Luna",
+  "species": "cane",
+  "breed": "Labrador",
+  "age": 4,
+  "notes": "Ama le passeggiate lunghe."
+}
+```
+
+Risposte principali:
+
+```text
+201 animale creato
+400 nome o specie mancanti
+401 token mancante o non valido
+403 ruolo non autorizzato
+409 animale già presente per il proprietario
+```
+
+Modifica animale:
+
+```text
+PUT http://localhost:3000/api/pets/:id
+Authorization: Bearer token
+```
+
+Body JSON:
+
+```json
+{
+  "name": "Luna",
+  "species": "cane",
+  "breed": "Labrador",
+  "age": 5,
+  "notes": "Ama le passeggiate lunghe."
+}
+```
+
+Risposte principali:
+
+```text
+200 animale modificato
+400 nome o specie mancanti
+401 token mancante o non valido
+403 ruolo non autorizzato
+404 animale non trovato
+409 animale già presente per il proprietario
+```
+
+Eliminazione animale:
+
+```text
+DELETE http://localhost:3000/api/pets/:id
+Authorization: Bearer token
+```
+
+Risposte principali:
+
+```text
+204 animale eliminato
+401 token mancante o non valido
+403 ruolo non autorizzato
+404 animale non trovato
 ```
 
 Risposta:
