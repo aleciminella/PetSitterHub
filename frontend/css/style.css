@@ -114,3 +114,49 @@ main {
     font-weight: 700;
     font-size: 0.85rem;
 }
+.search-section,
+.auth-section,
+.service-card,
+.sitter-card,
+.empty-state {
+    border-radius: 8px;
+}
+
+.sitter-card,
+.service-card {
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+    padding: 1.5rem;
+}
+
+.empty-state {
+    border: 1px dashed #ced4da;
+    background: #ffffff;
+    padding: 1.5rem;
+}
+
+@media (max-width: 767px) {
+    .hero {
+        padding: 4rem 0;
+    }
+
+    .hero h1 {
+        font-size: 2.5rem;
+    }
+
+    .search-section {
+        padding: 1.25rem;
+    }
+
+    .sitter-card,
+    .service-card {
+        padding: 1.25rem;
+    }
+
+    .sitter-avatar {
+        width: 52px;
+        height: 52px;
+        flex-basis: 52px;
+        font-size: 1rem;
+    }
+}
