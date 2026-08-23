@@ -170,6 +170,36 @@ Risposte principali:
 409 animale già presente per il proprietario
 ```
 
+Modifica animale:
+
+```text
+PUT http://localhost:3000/api/pets/:id
+Authorization: Bearer token
+```
+
+Body JSON:
+
+```json
+{
+  "name": "Luna",
+  "species": "cane",
+  "breed": "Labrador",
+  "age": 5,
+  "notes": "Ama le passeggiate lunghe."
+}
+```
+
+Risposte principali:
+
+```text
+200 animale modificato
+400 nome o specie mancanti
+401 token mancante o non valido
+403 ruolo non autorizzato
+404 animale non trovato
+409 animale già presente per il proprietario
+```
+
 Risposta:
 
 ```json
