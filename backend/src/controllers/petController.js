@@ -31,6 +31,29 @@ async function createPet(req, res, next) {
   }
 }
 
+async function deletePet(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `delete from pets
+       where id = $1 and owner_id = $2
+       returning id`,
+      [id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Animale non trovato"
+      });
+    }
+
+    return res.sendStatus(204);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function listPets(req, res, next) {
   try {
     const result = await pool.query(
@@ -94,6 +117,7 @@ async function updatePet(req, res, next) {
 
 module.exports = {
   createPet,
+  deletePet,
   listPets,
   updatePet
 };

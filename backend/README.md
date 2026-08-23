@@ -200,6 +200,22 @@ Risposte principali:
 409 animale già presente per il proprietario
 ```
 
+Eliminazione animale:
+
+```text
+DELETE http://localhost:3000/api/pets/:id
+Authorization: Bearer token
+```
+
+Risposte principali:
+
+```text
+204 animale eliminato
+401 token mancante o non valido
+403 ruolo non autorizzato
+404 animale non trovato
+```
+
 Risposta:
 
 ```json
