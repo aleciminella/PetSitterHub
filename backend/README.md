@@ -124,6 +124,8 @@ Elenco servizi disponibili:
 GET http://localhost:3000/api/services
 ```
 
+Ogni servizio include descrizione, tipo tariffa, modalità disponibilità e animali supportati.
+
 ## Animali proprietario
 
 Elenco animali del proprietario autenticato:
@@ -224,7 +226,10 @@ Risposta:
     {
       "id": "1",
       "name": "Passeggiata",
-      "description": "Passeggiata per cani di durata concordata."
+      "description": "Uscita con il cane per una durata concordata.",
+      "price_unit": "hourly",
+      "availability_mode": "hourly_slot",
+      "pet_types": ["cane"]
     }
   ]
 }
@@ -243,6 +248,7 @@ Filtri disponibili:
 ```text
 GET http://localhost:3000/api/sitters?city=Roma
 GET http://localhost:3000/api/sitters?service=Passeggiata
+GET http://localhost:3000/api/sitters?petType=cane
 ```
 
 Risposta:
@@ -261,6 +267,7 @@ Risposta:
         {
           "id": 1,
           "name": "Passeggiata",
+          "pet_type": "cane",
           "price": 12
         }
       ]
@@ -295,6 +302,12 @@ Filtro per servizio:
 
 ```bash
 curl "http://localhost:3000/api/sitters?service=Passeggiata"
+```
+
+Filtro per animale:
+
+```bash
+curl "http://localhost:3000/api/sitters?petType=cane"
 ```
 
 Account sitter demo:
