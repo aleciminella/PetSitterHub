@@ -2,7 +2,7 @@ const pool = require("../db/pool");
 
 async function listSitters(req, res, next) {
   try {
-    const { city, service } = req.query;
+    const { city, petType, service } = req.query;
 
     const values = [];
     const conditions = ["u.role = 'sitter'"];
@@ -15,6 +15,11 @@ async function listSitters(req, res, next) {
     if (service) {
       values.push(service);
       conditions.push(`s.name = $${values.length}`);
+    }
+
+    if (petType) {
+      values.push(petType);
+      conditions.push(`ss.pet_type = $${values.length}`);
     }
 
     const result = await pool.query(
@@ -30,9 +35,10 @@ async function listSitters(req, res, next) {
              json_build_object(
                'id', s.id,
                'name', s.name,
+               'pet_type', ss.pet_type,
                'price', ss.price
              )
-             order by s.name
+             order by s.name, ss.pet_type
            ) filter (where s.id is not null),
            '[]'
          ) as services
