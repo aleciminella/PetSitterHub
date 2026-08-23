@@ -29,7 +29,7 @@ function renderSitters(sitters) {
     if (!sitters.length) {
         $("#sittersList").html(`
             <div class="col-12">
-                <div class="empty-state">Nessun sitter trovato.</div>
+                <div class="empty-state">Nessun sitter trovato  con i filtri selezionati.</div>
             </div>
         `);
         return;
@@ -80,7 +80,7 @@ function loadSitters(filters = {}) {
     }).fail(function () {
         $("#sittersList").html(`
             <div class="col-12">
-                <div class="empty-state text-danger">Errore durante il caricamento dei sitter.</div>
+                <div class="empty-state text-danger">Errore durante il caricamento dei dati.</div>
             </div>
         `);
     });
