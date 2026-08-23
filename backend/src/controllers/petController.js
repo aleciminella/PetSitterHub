@@ -1,5 +1,36 @@
 const pool = require("../db/pool");
 
+async function createPet(req, res, next) {
+  try {
+    const { name, species, breed, age, notes } = req.body;
+
+    if (!name || !species) {
+      return res.status(400).json({
+        error: "Nome e specie sono obbligatori"
+      });
+    }
+
+    const result = await pool.query(
+      `insert into pets (owner_id, name, species, breed, age, notes)
+       values ($1, $2, $3, $4, $5, $6)
+       returning id, name, species, breed, age, notes, created_at`,
+      [req.user.id, name, species, breed || null, age || null, notes || null]
+    );
+
+    return res.status(201).json({
+      pet: result.rows[0]
+    });
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(409).json({
+        error: "Hai già inserito un animale con questo nome"
+      });
+    }
+
+    return next(err);
+  }
+}
+
 async function listPets(req, res, next) {
   try {
     const result = await pool.query(
@@ -19,5 +50,6 @@ async function listPets(req, res, next) {
 }
 
 module.exports = {
+  createPet,
   listPets
 };

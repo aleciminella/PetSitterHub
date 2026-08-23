@@ -5,5 +5,6 @@ const { requireRole, verifyToken } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.get("/", verifyToken, requireRole("owner"), petController.listPets);
+router.post("/", verifyToken, requireRole("owner"), petController.createPet);
 
 module.exports = router;

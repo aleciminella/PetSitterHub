@@ -141,6 +141,35 @@ Risposte principali:
 403 ruolo non autorizzato
 ```
 
+Aggiunta animale:
+
+```text
+POST http://localhost:3000/api/pets
+Authorization: Bearer token
+```
+
+Body JSON:
+
+```json
+{
+  "name": "Luna",
+  "species": "cane",
+  "breed": "Labrador",
+  "age": 4,
+  "notes": "Ama le passeggiate lunghe."
+}
+```
+
+Risposte principali:
+
+```text
+201 animale creato
+400 nome o specie mancanti
+401 token mancante o non valido
+403 ruolo non autorizzato
+409 animale già presente per il proprietario
+```
+
 Risposta:
 
 ```json
