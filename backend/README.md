@@ -124,6 +124,8 @@ Elenco servizi disponibili:
 GET http://localhost:3000/api/services
 ```
 
+Ogni servizio include descrizione, tipo tariffa, modalità disponibilità e animali supportati.
+
 ## Animali proprietario
 
 Elenco animali del proprietario autenticato:
