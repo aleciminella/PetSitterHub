@@ -60,7 +60,9 @@ create table pets (
   age integer check (age >= 0),
   notes text,
   created_at timestamptz not null default now(),
-  unique (owner_id, name)
+  unique (owner_id, name),
+  unique (id, owner_id),
+  unique (id, species)
 );
 
 create table availability_slots (
@@ -77,6 +79,8 @@ create table bookings (
   owner_id bigint not null references users(id),
   sitter_id bigint not null references sitter_profiles(id),
   service_id bigint not null references services(id),
+  pet_id bigint not null,
+  pet_type varchar(50) not null,
   starts_at timestamptz not null,
   ends_at timestamptz not null,
   status varchar(30) not null default 'pending'
@@ -84,6 +88,9 @@ create table bookings (
   total_price numeric(10, 2) not null check (total_price >= 0),
   notes text,
   created_at timestamptz not null default now(),
+  foreign key (pet_id, owner_id) references pets(id, owner_id),
+  foreign key (pet_id, pet_type) references pets(id, species),
+  foreign key (sitter_id, service_id, pet_type) references sitter_services(sitter_id, service_id, pet_type),
   check (ends_at > starts_at)
 );
 
