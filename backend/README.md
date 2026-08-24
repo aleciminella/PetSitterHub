@@ -235,6 +235,39 @@ Risposta:
 }
 ```
 
+## Prenotazioni
+
+Creazione richiesta prenotazione:
+
+```text
+POST http://localhost:3000/api/bookings
+Authorization: Bearer token
+```
+
+Body JSON:
+
+```json
+{
+  "sitterId": 1,
+  "serviceId": 1,
+  "petId": 1,
+  "startsAt": "2026-09-23T08:00:00.000Z",
+  "endsAt": "2026-09-23T09:00:00.000Z",
+  "notes": "Prima passeggiata di prova."
+}
+```
+
+Risposte principali:
+
+```text
+201 richiesta creata
+400 campi mancanti, date non valide o servizio non compatibile
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
+Il prezzo totale viene calcolato in base alla tariffa configurata per sitter, servizio e animale.
+
 ## Sitter
 
 Elenco sitter:
