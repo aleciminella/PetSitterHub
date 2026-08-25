@@ -80,6 +80,45 @@ function guardOwnerDashboard() {
     }
     return true;
 }
+function resetPetForm() {
+    $("#petId").val("");
+    $("#petForm")[0].reset();
+    $("#savePetButton").text("Salva animale");
+    $("#cancelEditPetButton").addClass("d-none");
+}
+
+function getPetFormData() {
+    return {
+        name: $("#petName").val(),
+        species: $("#petSpecies").val(),
+        breed: $("#petBreed").val(),
+        notes: $("#petNotes").val()
+    };
+}
+
+function savePet(event) {
+    event.preventDefault();
+    clearPetsMessage();
+
+    $.ajax({
+        url: `${API_BASE_URL}/pets`,
+        method: "POST",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify(getPetFormData()),
+        success: function () {
+            showPetsMessage("success", "Animale salvato correttamente.");
+            resetPetForm();
+            loadPets();
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.error
+                ? xhr.responseJSON.error
+                : "Errore durante il salvataggio dell'animale.";
+            showPetsMessage("danger", message);
+        }
+    });
+}
 
 $(document).ready(function () {
     if (!guardOwnerDashboard()) {
@@ -88,4 +127,5 @@ $(document).ready(function () {
 
     loadPets();
     $("#refreshPetsButton").on("click", loadPets);
+    $("#petForm").on("submit", savePet); 
 });
