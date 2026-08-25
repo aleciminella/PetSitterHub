@@ -329,6 +329,42 @@ Risposte principali:
 404 prenotazione non trovata
 ```
 
+### Recensioni
+
+Le recensioni pubbliche di un sitter sono consultabili senza login.
+
+```text
+GET http://localhost:3000/api/sitters/:sitterId/reviews
+```
+
+Il proprietario può recensire una prenotazione solo quando è completata.
+
+```text
+POST http://localhost:3000/api/bookings/:bookingId/reviews
+Authorization: Bearer token_owner
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "rating": 5,
+  "comment": "Servizio puntuale e molto curato."
+}
+```
+
+Risposte principali:
+
+```text
+200 elenco recensioni
+201 recensione creata
+400 valutazione non valida o prenotazione non completata
+401 token mancante o non valido
+403 ruolo non autorizzato
+409 recensione già inserita
+```
+
 ## Sitter
 
 Elenco sitter:

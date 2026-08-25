@@ -4,6 +4,7 @@ const bookingRoutes = require("./routes/bookingRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const petRoutes = require("./routes/petRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const sitterRoutes = require("./routes/sitterRoutes");
 
@@ -28,6 +29,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/bookings/:bookingId/messages", messageRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/pets", petRoutes);
+app.use("/api", reviewRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/sitters", sitterRoutes);
 
