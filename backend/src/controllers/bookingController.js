@@ -25,11 +25,46 @@ function hasInvalidDates(startsAt, endsAt) {
   return Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
 }
 
+function getPagination(query) {
+  const limit = Math.min(Number(query.limit) || 20, 50);
+  const offset = Number(query.offset) || 0;
+
+  return {
+    limit: Math.max(limit, 1),
+    offset: Math.max(offset, 0)
+  };
+}
+
+function addPeriodFilter(conditions, period) {
+  if (period === "future") {
+    conditions.push("b.ends_at >= now()");
+  }
+
+  if (period === "past") {
+    conditions.push("b.ends_at < now()");
+  }
+}
+
+function getBookingOrder(period) {
+  if (period === "future") {
+    return "b.starts_at asc";
+  }
+
+  return "b.starts_at desc";
+}
+
 async function listBookings(req, res, next) {
   try {
     let result;
+    const period = ["future", "past", "all"].includes(req.query.period) ? req.query.period : "all";
+    const pagination = getPagination(req.query);
 
     if (req.user.role === "owner") {
+      const values = [req.user.id];
+      const conditions = ["b.owner_id = $1"];
+      addPeriodFilter(conditions, period);
+      values.push(pagination.limit, pagination.offset);
+
       result = await pool.query(
         `select
            b.id,
@@ -52,11 +87,18 @@ async function listBookings(req, res, next) {
          join services s on s.id = b.service_id
          join sitter_profiles sp on sp.id = b.sitter_id
          join users u on u.id = sp.user_id
-         where b.owner_id = $1
-         order by b.starts_at desc`,
-        [req.user.id]
+         where ${conditions.join(" and ")}
+         order by ${getBookingOrder(period)}
+         limit $${values.length - 1}
+         offset $${values.length}`,
+        values
       );
     } else if (req.user.role === "sitter") {
+      const values = [req.user.id];
+      const conditions = ["sp.user_id = $1"];
+      addPeriodFilter(conditions, period);
+      values.push(pagination.limit, pagination.offset);
+
       result = await pool.query(
         `select
            b.id,
@@ -79,9 +121,11 @@ async function listBookings(req, res, next) {
          join services s on s.id = b.service_id
          join users owner on owner.id = b.owner_id
          join sitter_profiles sp on sp.id = b.sitter_id
-         where sp.user_id = $1
-         order by b.starts_at desc`,
-        [req.user.id]
+         where ${conditions.join(" and ")}
+         order by ${getBookingOrder(period)}
+         limit $${values.length - 1}
+         offset $${values.length}`,
+        values
       );
     } else {
       return res.status(403).json({

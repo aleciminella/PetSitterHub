@@ -246,6 +246,17 @@ Authorization: Bearer token
 
 Se l'utente è proprietario vede le proprie prenotazioni. Se l'utente è sitter vede le richieste ricevute.
 
+Filtri disponibili:
+
+```text
+GET http://localhost:3000/api/bookings?period=future
+GET http://localhost:3000/api/bookings?period=past
+GET http://localhost:3000/api/bookings?period=all
+GET http://localhost:3000/api/bookings?limit=5&offset=0
+```
+
+`period` permette di filtrare prenotazioni future, passate o tutte. `limit` e `offset` servono per mostrare le prenotazioni a blocchi, ad esempio 5 alla volta.
+
 Risposte principali:
 
 ```text
