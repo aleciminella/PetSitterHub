@@ -25,6 +25,78 @@ function hasInvalidDates(startsAt, endsAt) {
   return Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
 }
 
+async function listBookings(req, res, next) {
+  try {
+    let result;
+
+    if (req.user.role === "owner") {
+      result = await pool.query(
+        `select
+           b.id,
+           b.starts_at,
+           b.ends_at,
+           b.status,
+           b.total_price,
+           b.notes,
+           b.created_at,
+           p.id as pet_id,
+           p.name as pet_name,
+           p.species as pet_type,
+           s.id as service_id,
+           s.name as service_name,
+           sp.id as sitter_id,
+           u.first_name as sitter_first_name,
+           u.last_name as sitter_last_name
+         from bookings b
+         join pets p on p.id = b.pet_id
+         join services s on s.id = b.service_id
+         join sitter_profiles sp on sp.id = b.sitter_id
+         join users u on u.id = sp.user_id
+         where b.owner_id = $1
+         order by b.starts_at desc`,
+        [req.user.id]
+      );
+    } else if (req.user.role === "sitter") {
+      result = await pool.query(
+        `select
+           b.id,
+           b.starts_at,
+           b.ends_at,
+           b.status,
+           b.total_price,
+           b.notes,
+           b.created_at,
+           p.id as pet_id,
+           p.name as pet_name,
+           p.species as pet_type,
+           s.id as service_id,
+           s.name as service_name,
+           owner.id as owner_id,
+           owner.first_name as owner_first_name,
+           owner.last_name as owner_last_name
+         from bookings b
+         join pets p on p.id = b.pet_id
+         join services s on s.id = b.service_id
+         join users owner on owner.id = b.owner_id
+         join sitter_profiles sp on sp.id = b.sitter_id
+         where sp.user_id = $1
+         order by b.starts_at desc`,
+        [req.user.id]
+      );
+    } else {
+      return res.status(403).json({
+        error: "Operazione non autorizzata"
+      });
+    }
+
+    return res.json({
+      bookings: result.rows
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function createBooking(req, res, next) {
   try {
     const { sitterId, serviceId, petId, startsAt, endsAt, notes } = req.body;
@@ -88,5 +160,6 @@ async function createBooking(req, res, next) {
 }
 
 module.exports = {
-  createBooking
+  createBooking,
+  listBookings
 };

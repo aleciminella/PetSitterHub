@@ -237,6 +237,23 @@ Risposta:
 
 ## Prenotazioni
 
+Elenco prenotazioni:
+
+```text
+GET http://localhost:3000/api/bookings
+Authorization: Bearer token
+```
+
+Se l'utente è proprietario vede le proprie prenotazioni. Se l'utente è sitter vede le richieste ricevute.
+
+Risposte principali:
+
+```text
+200 elenco prenotazioni
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
 Creazione richiesta prenotazione:
 
 ```text
