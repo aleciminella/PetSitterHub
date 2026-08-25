@@ -366,3 +366,25 @@ Account sitter demo:
 giulia.sitter@example.com / password123
 luca.sitter@example.com / password123
 ```
+
+
+### Aggiornamento stato prenotazione
+
+Il sitter può accettare o rifiutare una richiesta ancora in attesa.
+
+```http
+PATCH http://localhost:3000/api/bookings/:id/accept
+Authorization: Bearer <token_sitter>
+```
+
+```http
+PATCH http://localhost:3000/api/bookings/:id/reject
+Authorization: Bearer <token_sitter>
+```
+
+Il proprietario può annullare una propria prenotazione se non è già chiusa.
+
+```http
+PATCH http://localhost:3000/api/bookings/:id/cancel
+Authorization: Bearer <token_owner>
+```

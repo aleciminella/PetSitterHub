@@ -159,7 +159,131 @@ async function createBooking(req, res, next) {
   }
 }
 
+async function findBookingForSitter(bookingId, sitterUserId) {
+  const result = await pool.query(
+    `select b.id, b.status
+     from bookings b
+     join sitter_profiles sp on sp.id = b.sitter_id
+     where b.id = $1
+       and sp.user_id = $2`,
+    [bookingId, sitterUserId]
+  );
+
+  return result.rows[0];
+}
+
+async function findBookingForOwner(bookingId, ownerId) {
+  const result = await pool.query(
+    `select id, status
+     from bookings
+     where id = $1
+       and owner_id = $2`,
+    [bookingId, ownerId]
+  );
+
+  return result.rows[0];
+}
+
+async function acceptBooking(req, res, next) {
+  try {
+    const booking = await findBookingForSitter(req.params.id, req.user.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        error: "Prenotazione non trovata"
+      });
+    }
+
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        error: "La prenotazione non può essere accettata"
+      });
+    }
+
+    const result = await pool.query(
+      `update bookings
+       set status = 'accepted', updated_at = now()
+       where id = $1
+       returning id, status, updated_at`,
+      [req.params.id]
+    );
+
+    return res.json({
+      booking: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function rejectBooking(req, res, next) {
+  try {
+    const booking = await findBookingForSitter(req.params.id, req.user.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        error: "Prenotazione non trovata"
+      });
+    }
+
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        error: "La prenotazione non può essere rifiutata"
+      });
+    }
+
+    const result = await pool.query(
+      `update bookings
+       set status = 'rejected', updated_at = now()
+       where id = $1
+       returning id, status, updated_at`,
+      [req.params.id]
+    );
+
+    return res.json({
+      booking: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function cancelBooking(req, res, next) {
+  try {
+    const booking = await findBookingForOwner(req.params.id, req.user.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        error: "Prenotazione non trovata"
+      });
+    }
+
+    if (["cancelled", "rejected", "completed"].includes(booking.status)) {
+      return res.status(400).json({
+        error: "La prenotazione non può essere annullata"
+      });
+    }
+
+    const result = await pool.query(
+      `update bookings
+       set status = 'cancelled', updated_at = now()
+       where id = $1
+       returning id, status, updated_at`,
+      [req.params.id]
+    );
+
+    return res.json({
+      booking: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
+  acceptBooking,
+  cancelBooking,
   createBooking,
-  listBookings
+  listBookings,
+  rejectBooking
 };
