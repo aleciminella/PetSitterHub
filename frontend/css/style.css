@@ -182,3 +182,18 @@ main {
         grid-template-columns: 1fr;
     }
 }
+.pet-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 767px) {
+    .pet-item {
+        flex-direction: column;
+    }
+}
