@@ -160,3 +160,25 @@ main {
         font-size: 1rem;
     }
 }
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+    gap: 1.5rem;
+}
+
+.dashboard-panel {
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.dashboard-panel-full {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 991px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
