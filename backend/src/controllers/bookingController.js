@@ -161,7 +161,7 @@ async function createBooking(req, res, next) {
 
 async function findBookingForSitter(bookingId, sitterUserId) {
   const result = await pool.query(
-    `select b.id, b.status
+    `select b.id, b.sitter_id, b.starts_at, b.ends_at, b.status
      from bookings b
      join sitter_profiles sp on sp.id = b.sitter_id
      where b.id = $1
@@ -170,6 +170,22 @@ async function findBookingForSitter(bookingId, sitterUserId) {
   );
 
   return result.rows[0];
+}
+
+async function hasAcceptedBookingOverlap(booking) {
+  const result = await pool.query(
+    `select id
+     from bookings
+     where sitter_id = $1
+       and id <> $2
+       and status = 'accepted'
+       and starts_at < $3
+       and ends_at > $4
+     limit 1`,
+    [booking.sitter_id, booking.id, booking.ends_at, booking.starts_at]
+  );
+
+  return result.rows.length > 0;
 }
 
 async function findBookingForOwner(bookingId, ownerId) {
@@ -197,6 +213,14 @@ async function acceptBooking(req, res, next) {
     if (booking.status !== "pending") {
       return res.status(400).json({
         error: "La prenotazione non può essere accettata"
+      });
+    }
+
+    const hasOverlap = await hasAcceptedBookingOverlap(booking);
+
+    if (hasOverlap) {
+      return res.status(409).json({
+        error: "Il sitter ha già una prenotazione accettata in questo orario"
       });
     }
 

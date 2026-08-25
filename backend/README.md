@@ -370,7 +370,7 @@ luca.sitter@example.com / password123
 
 ### Aggiornamento stato prenotazione
 
-Il sitter può accettare o rifiutare una richiesta ancora in attesa.
+Il sitter può accettare o rifiutare una richiesta ancora in attesa. Una richiesta può essere accettata solo se il sitter non ha già un'altra prenotazione accettata nello stesso intervallo.
 
 ```http
 PATCH http://localhost:3000/api/bookings/:id/accept
