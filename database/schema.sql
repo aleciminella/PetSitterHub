@@ -88,6 +88,7 @@ create table bookings (
   total_price numeric(10, 2) not null check (total_price >= 0),
   notes text,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   foreign key (pet_id, owner_id) references pets(id, owner_id),
   foreign key (pet_id, pet_type) references pets(id, species),
   foreign key (sitter_id, service_id, pet_type) references sitter_services(sitter_id, service_id, pet_type),

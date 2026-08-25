@@ -1,5 +1,18 @@
 const API_BASE_URL = "http://localhost:4000/api";
 
+function servicePriceLabel(service) {
+    if (service.price_unit === "hourly") {
+        return "Tariffa oraria";
+    }
+    if (service.price_unit === "daily") {
+        return "Tariffa giornaliera";
+    }
+    if (service.price_unit === "fixed") {
+        return "Prezzo fisso";
+    }
+    return "Tariffa configurabile";
+}
+
 function renderServices(services) {
     if (!services.length) {
         $("#servicesList").html(`
@@ -14,7 +27,8 @@ function renderServices(services) {
         return `
             <div class="col-md-6 col-lg-4">
                 <article class="service-card h-100">
-                    <h2 class="h5">${service.name}</h2>
+                    <span class="service-type">${servicePriceLabel(service)}</span>
+                    <h2 class="h5 mt-3">${service.name}</h2>
                     <p class="text-muted mb-0">${service.description || "Descrizione non disponibile."}</p>
                 </article>
             </div>
