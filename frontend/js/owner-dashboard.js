@@ -1,4 +1,5 @@
 const API_BASE_URL = "http://localhost:4000/api";
+let petsCache = [];
 
 function getSavedUser() {
     const savedUser = localStorage.getItem("petsitterhubUser");
@@ -63,7 +64,8 @@ function loadPets() {
         method: "GET",
         headers: authHeaders(),
         success: function (response) {
-            renderPets(response.pets || []);
+            petsCache = response.pets || [];
+            renderPets(petsCache);
         },
         error: function () {
             $("#petsList").html('<div class="empty-state text-danger">Errore durante il caricamento degli animali.</div>');
@@ -80,6 +82,7 @@ function guardOwnerDashboard() {
     }
     return true;
 }
+
 function resetPetForm() {
     $("#petId").val("");
     $("#petForm")[0].reset();
@@ -96,18 +99,55 @@ function getPetFormData() {
     };
 }
 
+function startPetEdit(petId) {
+    const pet = petsCache.find(function (item) {
+        return String(item.id) === String(petId);
+    });
+    if (!pet) {
+        return;
+    }
+
+    $("#petId").val(pet.id);
+    $("#petName").val(pet.name);
+    $("#petSpecies").val(pet.species);
+    $("#petBreed").val(pet.breed || "");
+    $("#petNotes").val(pet.notes || "");
+    $("#savePetButton").text("Aggiorna animale");
+    $("#cancelEditPetButton").removeClass("d-none");
+}
+
+function deletePet(petId) {
+    clearPetsMessage();
+    $.ajax({
+        url: `${API_BASE_URL}/pets/${petId}`,
+        method: "DELETE",
+        headers: authHeaders(),
+        success: function () {
+            showPetsMessage("success", "Animale eliminato correttamente.");
+            loadPets();
+        },
+        error: function () {
+            showPetsMessage("danger", "Errore durante l'eliminazione dell'animale.");
+        }
+    });
+}
+
 function savePet(event) {
     event.preventDefault();
     clearPetsMessage();
 
+    const petId = $("#petId").val();
+    const method = petId ? "PUT" : "POST";
+    const url = petId ? `${API_BASE_URL}/pets/${petId}` : `${API_BASE_URL}/pets`;
+
     $.ajax({
-        url: `${API_BASE_URL}/pets`,
-        method: "POST",
+        url,
+        method,
         headers: authHeaders(),
         contentType: "application/json",
         data: JSON.stringify(getPetFormData()),
         success: function () {
-            showPetsMessage("success", "Animale salvato correttamente.");
+            showPetsMessage("success", petId ? "Animale aggiornato correttamente." : "Animale salvato correttamente.");
             resetPetForm();
             loadPets();
         },
@@ -127,5 +167,15 @@ $(document).ready(function () {
 
     loadPets();
     $("#refreshPetsButton").on("click", loadPets);
-    $("#petForm").on("submit", savePet); 
+    $("#petForm").on("submit", savePet);
+
+    $("#petsList").on("click", ".edit-pet-button", function () {
+        startPetEdit($(this).data("id"));
+    });
+
+    $("#petsList").on("click", ".delete-pet-button", function () {
+        deletePet($(this).data("id"));
+    });
+
+    $("#cancelEditPetButton").on("click", resetPetForm);
 });
