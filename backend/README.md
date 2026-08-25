@@ -296,6 +296,39 @@ Risposte principali:
 
 Il prezzo totale viene calcolato in base alla tariffa configurata per sitter, servizio e animale.
 
+### Messaggi prenotazione
+
+Proprietario e sitter possono leggere e inviare messaggi solo sulle prenotazioni in cui sono coinvolti.
+
+```text
+GET http://localhost:3000/api/bookings/:bookingId/messages
+Authorization: Bearer token
+```
+
+```text
+POST http://localhost:3000/api/bookings/:bookingId/messages
+Authorization: Bearer token
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "body": "Ciao, possiamo concordare i dettagli del servizio?"
+}
+```
+
+Risposte principali:
+
+```text
+200 elenco messaggi
+201 messaggio creato
+400 messaggio mancante
+401 token mancante o non valido
+404 prenotazione non trovata
+```
+
 ## Sitter
 
 Elenco sitter:
