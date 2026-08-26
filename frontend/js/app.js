@@ -18,6 +18,7 @@ function updateNavbar() {
     const currentPage = window.location.pathname.split("/").pop() || "index.html";
     const onHome = currentPage === "index.html";
     const onServices = currentPage === "services.html";
+    const onOwnerDashboard = currentPage === "owner-dashboard.html";
 
     if (!$("#navbarActions").length) {
         return;
@@ -26,6 +27,7 @@ function updateNavbar() {
     $("#mainNavbarLinks").html(`
         ${onHome ? "" : `<li class="nav-item"><a class="nav-link" href="${prefix}index.html#search">Cerca sitter</a></li>`}
         ${onServices ? "" : `<li class="nav-item"><a class="nav-link" href="${prefix}pages/services.html">Servizi</a></li>`}
+        ${user && user.role === "owner" && !onOwnerDashboard ? `<li class="nav-item"><a class="nav-link" href="${prefix}pages/owner-dashboard.html">Dashboard</a></li>` : ""}
     `);
 
     if (!user) {
