@@ -197,3 +197,74 @@ main {
         flex-direction: column;
     }
 }
+.booking-filter {
+    max-width: 220px;
+}
+
+.booking-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #ffffff;
+}
+
+.booking-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.booking-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.booking-status-pending {
+    background: #fff3cd;
+    color: #664d03;
+}
+
+.booking-status-accepted {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.booking-status-rejected,
+.booking-status-cancelled {
+    background: #f8d7da;
+    color: #842029;
+}
+
+.booking-status-completed {
+    background: #cff4fc;
+    color: #055160;
+}
+
+.booking-message-box {
+    border-top: 1px solid #dee2e6;
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
+.booking-message-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 767px) {
+    .booking-card-header {
+        flex-direction: column;
+    }
+
+    .booking-filter {
+        max-width: 100%;
+    }
+}
