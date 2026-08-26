@@ -245,6 +245,7 @@ Authorization: Bearer token
 ```
 
 Se l'utente è proprietario vede le proprie prenotazioni. Se l'utente è sitter vede le richieste ricevute.
+Ogni prenotazione include anche i dati del pagamento, se già registrato.
 
 Filtri disponibili:
 

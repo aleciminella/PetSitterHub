@@ -74,6 +74,10 @@ async function listBookings(req, res, next) {
            b.total_price,
            b.notes,
            b.created_at,
+           pay.id as payment_id,
+           pay.method as payment_method,
+           pay.status as payment_status,
+           pay.provider_reference,
            p.id as pet_id,
            p.name as pet_name,
            p.species as pet_type,
@@ -87,6 +91,7 @@ async function listBookings(req, res, next) {
          join services s on s.id = b.service_id
          join sitter_profiles sp on sp.id = b.sitter_id
          join users u on u.id = sp.user_id
+         left join payments pay on pay.booking_id = b.id
          where ${conditions.join(" and ")}
          order by ${getBookingOrder(period)}
          limit $${values.length - 1}
@@ -108,6 +113,10 @@ async function listBookings(req, res, next) {
            b.total_price,
            b.notes,
            b.created_at,
+           pay.id as payment_id,
+           pay.method as payment_method,
+           pay.status as payment_status,
+           pay.provider_reference,
            p.id as pet_id,
            p.name as pet_name,
            p.species as pet_type,
@@ -121,6 +130,7 @@ async function listBookings(req, res, next) {
          join services s on s.id = b.service_id
          join users owner on owner.id = b.owner_id
          join sitter_profiles sp on sp.id = b.sitter_id
+         left join payments pay on pay.booking_id = b.id
          where ${conditions.join(" and ")}
          order by ${getBookingOrder(period)}
          limit $${values.length - 1}
