@@ -117,6 +117,8 @@ create table payments (
   id bigserial primary key,
   booking_id bigint not null unique references bookings(id) on delete cascade,
   amount numeric(10, 2) not null check (amount >= 0),
+  method varchar(30) not null default 'demo_card'
+    check (method in ('demo_card', 'bank_transfer')),
   status varchar(30) not null default 'simulated'
     check (status in ('simulated', 'authorized', 'paid', 'refunded', 'failed')),
   provider_reference varchar(120),

@@ -235,6 +235,172 @@ Risposta:
 }
 ```
 
+## Prenotazioni
+
+Elenco prenotazioni:
+
+```text
+GET http://localhost:3000/api/bookings
+Authorization: Bearer token
+```
+
+Se l'utente è proprietario vede le proprie prenotazioni. Se l'utente è sitter vede le richieste ricevute.
+
+Filtri disponibili:
+
+```text
+GET http://localhost:3000/api/bookings?period=future
+GET http://localhost:3000/api/bookings?period=past
+GET http://localhost:3000/api/bookings?period=all
+GET http://localhost:3000/api/bookings?limit=5&offset=0
+```
+
+`period` permette di filtrare prenotazioni future, passate o tutte. `limit` e `offset` servono per mostrare le prenotazioni a blocchi, ad esempio 5 alla volta.
+
+Risposte principali:
+
+```text
+200 elenco prenotazioni
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
+Creazione richiesta prenotazione:
+
+```text
+POST http://localhost:3000/api/bookings
+Authorization: Bearer token
+```
+
+Body JSON:
+
+```json
+{
+  "sitterId": 1,
+  "serviceId": 1,
+  "petId": 1,
+  "startsAt": "2026-09-23T08:00:00.000Z",
+  "endsAt": "2026-09-23T09:00:00.000Z",
+  "notes": "Prima passeggiata di prova."
+}
+```
+
+Risposte principali:
+
+```text
+201 richiesta creata
+400 campi mancanti, date non valide o servizio non compatibile
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
+Il prezzo totale viene calcolato in base alla tariffa configurata per sitter, servizio e animale.
+
+### Messaggi prenotazione
+
+Proprietario e sitter possono leggere e inviare messaggi solo sulle prenotazioni in cui sono coinvolti.
+
+```text
+GET http://localhost:3000/api/bookings/:bookingId/messages
+Authorization: Bearer token
+```
+
+```text
+POST http://localhost:3000/api/bookings/:bookingId/messages
+Authorization: Bearer token
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "body": "Ciao, possiamo concordare i dettagli del servizio?"
+}
+```
+
+Risposte principali:
+
+```text
+200 elenco messaggi
+201 messaggio creato
+400 messaggio mancante
+401 token mancante o non valido
+404 prenotazione non trovata
+```
+
+### Recensioni
+
+Le recensioni pubbliche di un sitter sono consultabili senza login.
+
+```text
+GET http://localhost:3000/api/sitters/:sitterId/reviews
+```
+
+Il proprietario può recensire una prenotazione solo quando è completata.
+
+```text
+POST http://localhost:3000/api/bookings/:bookingId/reviews
+Authorization: Bearer token_owner
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "rating": 5,
+  "comment": "Servizio puntuale e molto curato."
+}
+```
+
+Risposte principali:
+
+```text
+200 elenco recensioni
+201 recensione creata
+400 valutazione non valida o prenotazione non completata
+401 token mancante o non valido
+403 ruolo non autorizzato
+409 recensione già inserita
+```
+
+### Pagamenti demo
+
+Il proprietario può registrare un pagamento demo solo dopo che il sitter ha accettato la richiesta.
+
+```text
+POST http://localhost:3000/api/bookings/:bookingId/payments
+Authorization: Bearer token_owner
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "method": "demo_card"
+}
+```
+
+Metodi disponibili:
+
+```text
+demo_card
+bank_transfer
+```
+
+Risposte principali:
+
+```text
+201 pagamento registrato
+400 metodo non valido o prenotazione non ancora accettata
+401 token mancante o non valido
+403 ruolo non autorizzato
+404 prenotazione non trovata
+409 pagamento già registrato
+```
+
 ## Sitter
 
 Elenco sitter:
@@ -315,4 +481,26 @@ Account sitter demo:
 ```text
 giulia.sitter@example.com / password123
 luca.sitter@example.com / password123
+```
+
+
+### Aggiornamento stato prenotazione
+
+Il sitter può accettare o rifiutare una richiesta ancora in attesa. Una richiesta può essere accettata solo se il sitter non ha già un'altra prenotazione accettata nello stesso intervallo.
+
+```http
+PATCH http://localhost:3000/api/bookings/:id/accept
+Authorization: Bearer <token_sitter>
+```
+
+```http
+PATCH http://localhost:3000/api/bookings/:id/reject
+Authorization: Bearer <token_sitter>
+```
+
+Il proprietario può annullare una propria prenotazione se non è già chiusa.
+
+```http
+PATCH http://localhost:3000/api/bookings/:id/cancel
+Authorization: Bearer <token_owner>
 ```
