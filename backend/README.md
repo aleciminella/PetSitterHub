@@ -391,6 +391,15 @@ demo_card
 bank_transfer
 ```
 
+Con `demo_card` il pagamento viene registrato come pagato. Con `bank_transfer` il pagamento viene registrato come autorizzato e resta in attesa di conferma da parte del sitter.
+
+Conferma bonifico da parte del sitter:
+
+```text
+PATCH http://localhost:3000/api/payments/:id/confirm-bank-transfer
+Authorization: Bearer token_sitter
+```
+
 Risposte principali:
 
 ```text

@@ -5,6 +5,14 @@ function createProviderReference(method, bookingId) {
   return `${prefix}-${Date.now()}-${bookingId}`;
 }
 
+function getInitialPaymentStatus(method) {
+  if (method === "bank_transfer") {
+    return "authorized";
+  }
+
+  return "paid";
+}
+
 async function createPayment(req, res, next) {
   try {
     const { method } = req.body;
@@ -40,12 +48,13 @@ async function createPayment(req, res, next) {
 
     const result = await pool.query(
       `insert into payments (booking_id, amount, method, status, provider_reference)
-       values ($1, $2, $3, 'paid', $4)
+       values ($1, $2, $3, $4, $5)
        returning id, booking_id, amount, method, status, provider_reference, created_at`,
       [
         req.params.bookingId,
         booking.total_price,
         paymentMethod,
+        getInitialPaymentStatus(paymentMethod),
         createProviderReference(paymentMethod, req.params.bookingId)
       ]
     );
@@ -64,6 +73,37 @@ async function createPayment(req, res, next) {
   }
 }
 
+async function confirmBankTransfer(req, res, next) {
+  try {
+    const result = await pool.query(
+      `update payments pay
+       set status = 'paid'
+       from bookings b
+       join sitter_profiles sp on sp.id = b.sitter_id
+       where pay.id = $1
+         and pay.booking_id = b.id
+         and sp.user_id = $2
+         and pay.method = 'bank_transfer'
+         and pay.status = 'authorized'
+       returning pay.id, pay.booking_id, pay.amount, pay.method, pay.status, pay.provider_reference, pay.created_at`,
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Bonifico da confermare non trovato"
+      });
+    }
+
+    return res.json({
+      payment: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
+  confirmBankTransfer,
   createPayment
 };

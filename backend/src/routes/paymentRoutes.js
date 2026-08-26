@@ -5,5 +5,6 @@ const { requireRole, verifyToken } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.post("/bookings/:bookingId/payments", verifyToken, requireRole("owner"), paymentController.createPayment);
+router.patch("/payments/:id/confirm-bank-transfer", verifyToken, requireRole("sitter"), paymentController.confirmBankTransfer);
 
 module.exports = router;
