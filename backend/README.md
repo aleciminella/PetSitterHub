@@ -486,6 +486,37 @@ Filtro per animale:
 curl "http://localhost:3000/api/sitters?petType=cane"
 ```
 
+Profilo personale sitter:
+
+```text
+GET http://localhost:3000/api/sitters/me
+Authorization: Bearer token_sitter
+```
+
+```text
+PUT http://localhost:3000/api/sitters/me
+Authorization: Bearer token_sitter
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "bio": "Mi occupo di cani e gatti con esperienza.",
+  "baseCity": "Roma"
+}
+```
+
+Risposte principali:
+
+```text
+200 profilo restituito o aggiornato
+400 città base mancante
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
 Account sitter demo:
 
 ```text

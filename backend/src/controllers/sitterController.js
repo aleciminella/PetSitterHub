@@ -1,5 +1,62 @@
 const pool = require("../db/pool");
 
+async function getMySitterProfile(req, res, next) {
+  try {
+    const result = await pool.query(
+      `select
+         u.id as user_id,
+         u.first_name,
+         u.last_name,
+         u.email,
+         u.phone,
+         u.city,
+         sp.id as sitter_id,
+         sp.bio,
+         sp.base_city,
+         sp.verified,
+         sp.created_at
+       from users u
+       left join sitter_profiles sp on sp.user_id = u.id
+       where u.id = $1`,
+      [req.user.id]
+    );
+
+    return res.json({
+      profile: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function updateMySitterProfile(req, res, next) {
+  try {
+    const { bio, baseCity } = req.body;
+
+    if (!baseCity || baseCity.trim().length === 0) {
+      return res.status(400).json({
+        error: "Città base obbligatoria"
+      });
+    }
+
+    const result = await pool.query(
+      `insert into sitter_profiles (user_id, bio, base_city)
+       values ($1, $2, $3)
+       on conflict (user_id) do update set
+         bio = excluded.bio,
+         base_city = excluded.base_city
+       returning id, user_id, bio, base_city, verified, created_at`,
+      [req.user.id, bio || null, baseCity.trim()]
+    );
+
+    return res.json({
+      profile: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function listSitters(req, res, next) {
   try {
     const { city, petType, service } = req.query;
@@ -61,5 +118,7 @@ async function listSitters(req, res, next) {
 }
 
 module.exports = {
+  getMySitterProfile,
+  updateMySitterProfile,
   listSitters
 };
