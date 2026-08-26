@@ -39,12 +39,13 @@ async function createPayment(req, res, next) {
     }
 
     const result = await pool.query(
-      `insert into payments (booking_id, amount, status, provider_reference)
-       values ($1, $2, 'paid', $3)
-       returning id, booking_id, amount, status, provider_reference, created_at`,
+      `insert into payments (booking_id, amount, method, status, provider_reference)
+       values ($1, $2, $3, 'paid', $4)
+       returning id, booking_id, amount, method, status, provider_reference, created_at`,
       [
         req.params.bookingId,
         booking.total_price,
+        paymentMethod,
         createProviderReference(paymentMethod, req.params.bookingId)
       ]
     );
