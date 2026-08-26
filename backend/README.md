@@ -365,6 +365,42 @@ Risposte principali:
 409 recensione già inserita
 ```
 
+### Pagamenti demo
+
+Il proprietario può registrare un pagamento demo solo dopo che il sitter ha accettato la richiesta.
+
+```text
+POST http://localhost:3000/api/bookings/:bookingId/payments
+Authorization: Bearer token_owner
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "method": "demo_card"
+}
+```
+
+Metodi disponibili:
+
+```text
+demo_card
+bank_transfer
+```
+
+Risposte principali:
+
+```text
+201 pagamento registrato
+400 metodo non valido o prenotazione non ancora accettata
+401 token mancante o non valido
+403 ruolo non autorizzato
+404 prenotazione non trovata
+409 pagamento già registrato
+```
+
 ## Sitter
 
 Elenco sitter:
