@@ -203,6 +203,13 @@ function renderBookings(bookings, append) {
                         ${getBookingStatusLabel(booking.status)}
                     </span>
                 </div>
+                ${["pending", "accepted"].includes(booking.status) ? `
+                    <div class="mt-3">
+                        <button class="btn btn-outline-danger btn-sm cancel-booking-button" type="button" data-id="${booking.id}">
+                            Annulla
+                        </button>
+                    </div>
+                ` : ""}
             </article>
         `;
     }).join("");
@@ -235,6 +242,22 @@ function loadBookings(append = false) {
         }
     });
 }
+function cancelBooking(bookingId) {
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/cancel`,
+        method: "PATCH",
+        headers: authHeaders(),
+        success: function () {
+            loadBookings();
+        },
+        error: function () {
+            $("#bookingsMessage")
+                .removeClass("d-none alert-success")
+                .addClass("alert-danger")
+                .text("Errore durante l'annullamento della prenotazione.");
+        }
+    });
+}
 
 $(document).ready(function () {
     if (!guardOwnerDashboard()) {
@@ -262,4 +285,7 @@ $(document).ready(function () {
     });
 
     $("#cancelEditPetButton").on("click", resetPetForm);
+    $("#bookingsList").on("click", ".cancel-booking-button", function () {
+        cancelBooking($(this).data("id"));
+    });
 });
