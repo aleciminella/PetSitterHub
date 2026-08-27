@@ -72,8 +72,22 @@
             </div>
 
             <div class="dashboard-panel dashboard-panel-full">
-                <h2 class="h4 mb-3">Prenotazioni</h2>
-                <div class="empty-state">Le prenotazioni saranno disponibili nel prossimo blocco.</div>
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Prenotazioni</h2>
+                        <p class="text-muted mb-0">Controlla richieste, prenotazioni future e storico.</p>
+                    </div>
+                    <select class="form-select booking-filter" id="bookingPeriod">
+                        <option value="future">Future</option>
+                        <option value="past">Passate</option>
+                        <option value="all">Tutte</option>
+                    </select>
+                </div>
+                <div id="bookingsMessage" class="alert d-none" role="alert"></div>
+                <div id="bookingsList"></div>
+                <button class="btn btn-outline-primary d-none mt-3" type="button" id="loadMoreBookingsButton">
+                    Mostra altre prenotazioni
+                </button>
             </div>
         </section>
     </main>
