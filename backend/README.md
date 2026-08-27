@@ -549,6 +549,26 @@ Authorization: Bearer token_sitter
 
 La risposta contiene solo i servizi compatibili con gli animali accettati dal sitter. Ogni riga indica servizio, animale, prezzo configurato e se il servizio è attivo.
 
+```text
+PUT http://localhost:3000/api/sitters/me/services
+Authorization: Bearer token_sitter
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "services": [
+    {
+      "serviceId": 1,
+      "petType": "cane",
+      "price": 12
+    }
+  ]
+}
+```
+
 Account sitter demo:
 
 ```text

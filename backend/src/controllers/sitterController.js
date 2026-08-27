@@ -196,6 +196,83 @@ async function listMyServices(req, res, next) {
   }
 }
 
+async function updateMyServices(req, res, next) {
+  const client = await pool.connect();
+
+  try {
+    const { services } = req.body;
+
+    if (!Array.isArray(services)) {
+      return res.status(400).json({
+        error: "Lista servizi non valida"
+      });
+    }
+
+    const sitterId = await findMySitterProfileId(req.user.id);
+
+    if (!sitterId) {
+      return res.status(400).json({
+        error: "Profilo sitter non configurato"
+      });
+    }
+
+    await client.query("begin");
+    await client.query("delete from sitter_services where sitter_id = $1", [sitterId]);
+
+    for (const service of services) {
+      const price = Number(service.price);
+
+      if (!service.serviceId || !service.petType || !Number.isFinite(price) || price < 0) {
+        await client.query("rollback");
+        return res.status(400).json({
+          error: "Servizio o prezzo non valido"
+        });
+      }
+
+      await client.query(
+        `insert into sitter_services (sitter_id, service_id, pet_type, price)
+         values ($1, $2, $3, $4)`,
+        [sitterId, service.serviceId, service.petType, price]
+      );
+    }
+
+    await client.query("commit");
+
+    const result = await pool.query(
+      `select
+         s.id as service_id,
+         s.name,
+         s.description,
+         s.price_unit,
+         s.availability_mode,
+         ss.pet_type,
+         ss.price,
+         true as enabled
+       from sitter_services ss
+       join services s on s.id = ss.service_id
+       where ss.sitter_id = $1
+       order by s.name, ss.pet_type`,
+      [sitterId]
+    );
+
+    return res.json({
+      services: result.rows
+    });
+  } catch (err) {
+    await client.query("rollback");
+
+    if (err.code === "23503") {
+      return res.status(400).json({
+        error: "Servizio non compatibile con gli animali accettati"
+      });
+    }
+
+    return next(err);
+  } finally {
+    client.release();
+  }
+}
+
 async function listSitters(req, res, next) {
   try {
     const { city, petType, service } = req.query;
@@ -261,6 +338,7 @@ module.exports = {
   listMyPetTypes,
   listMyServices,
   updateMyPetTypes,
+  updateMyServices,
   updateMySitterProfile,
   listSitters
 };
