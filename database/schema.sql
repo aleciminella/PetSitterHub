@@ -74,6 +74,39 @@ create table availability_slots (
   check (ends_at > starts_at)
 );
 
+create table sitter_weekly_availability (
+  id bigserial primary key,
+  sitter_id bigint not null references sitter_profiles(id) on delete cascade,
+  weekday integer not null check (weekday between 0 and 6),
+  is_available boolean not null default false,
+  starts_at time,
+  ends_at time,
+  unique (sitter_id, weekday),
+  check (
+    (is_available = false and starts_at is null and ends_at is null)
+    or
+    (is_available = true and starts_at is not null and ends_at is not null and ends_at > starts_at)
+  )
+);
+
+create table sitter_availability_exceptions (
+  id bigserial primary key,
+  sitter_id bigint not null references sitter_profiles(id) on delete cascade,
+  starts_on date not null,
+  ends_on date not null,
+  is_available boolean not null default false,
+  starts_at time,
+  ends_at time,
+  note text,
+  unique (sitter_id, starts_on, ends_on),
+  check (ends_on >= starts_on),
+  check (
+    (is_available = false and starts_at is null and ends_at is null)
+    or
+    (is_available = true and starts_at is not null and ends_at is not null and ends_at > starts_at)
+  )
+);
+
 create table bookings (
   id bigserial primary key,
   owner_id bigint not null references users(id),
