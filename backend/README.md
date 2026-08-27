@@ -517,6 +517,29 @@ Risposte principali:
 403 ruolo non autorizzato
 ```
 
+Animali accettati dal sitter:
+
+```text
+GET http://localhost:3000/api/sitters/me/pet-types
+Authorization: Bearer token_sitter
+```
+
+```text
+PUT http://localhost:3000/api/sitters/me/pet-types
+Authorization: Bearer token_sitter
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "petTypes": ["cane", "gatto"]
+}
+```
+
+Quando un animale viene rimosso dagli animali accettati, vengono rimossi anche i servizi del sitter collegati a quell'animale.
+
 Account sitter demo:
 
 ```text

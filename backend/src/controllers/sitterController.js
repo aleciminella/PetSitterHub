@@ -57,6 +57,106 @@ async function updateMySitterProfile(req, res, next) {
   }
 }
 
+async function findMySitterProfileId(userId) {
+  const result = await pool.query(
+    `select id
+     from sitter_profiles
+     where user_id = $1`,
+    [userId]
+  );
+
+  return result.rows[0] && result.rows[0].id;
+}
+
+async function listMyPetTypes(req, res, next) {
+  try {
+    const sitterId = await findMySitterProfileId(req.user.id);
+
+    if (!sitterId) {
+      return res.json({
+        petTypes: []
+      });
+    }
+
+    const result = await pool.query(
+      `select pet_type
+       from sitter_pet_types
+       where sitter_id = $1
+       order by pet_type`,
+      [sitterId]
+    );
+
+    return res.json({
+      petTypes: result.rows.map((row) => row.pet_type)
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function updateMyPetTypes(req, res, next) {
+  const client = await pool.connect();
+
+  try {
+    const { petTypes } = req.body;
+
+    if (!Array.isArray(petTypes)) {
+      return res.status(400).json({
+        error: "Lista animali non valida"
+      });
+    }
+
+    const sitterId = await findMySitterProfileId(req.user.id);
+
+    if (!sitterId) {
+      return res.status(400).json({
+        error: "Profilo sitter non configurato"
+      });
+    }
+
+    const cleanedPetTypes = petTypes
+      .filter((petType) => petType && petType.trim().length > 0)
+      .map((petType) => petType.trim());
+
+    await client.query("begin");
+    await client.query(
+      `delete from sitter_services
+       where sitter_id = $1
+         and not (pet_type = any($2::varchar[]))`,
+      [sitterId, cleanedPetTypes]
+    );
+    await client.query("delete from sitter_pet_types where sitter_id = $1", [sitterId]);
+
+    for (const petType of cleanedPetTypes) {
+      await client.query(
+        `insert into sitter_pet_types (sitter_id, pet_type)
+         values ($1, $2)
+         on conflict (sitter_id, pet_type) do nothing`,
+        [sitterId, petType]
+      );
+    }
+
+    const result = await client.query(
+      `select pet_type
+       from sitter_pet_types
+       where sitter_id = $1
+       order by pet_type`,
+      [sitterId]
+    );
+
+    await client.query("commit");
+
+    return res.json({
+      petTypes: result.rows.map((row) => row.pet_type)
+    });
+  } catch (err) {
+    await client.query("rollback");
+    return next(err);
+  } finally {
+    client.release();
+  }
+}
+
 async function listSitters(req, res, next) {
   try {
     const { city, petType, service } = req.query;
@@ -119,6 +219,8 @@ async function listSitters(req, res, next) {
 
 module.exports = {
   getMySitterProfile,
+  listMyPetTypes,
+  updateMyPetTypes,
   updateMySitterProfile,
   listSitters
 };
