@@ -245,6 +245,7 @@ Authorization: Bearer token
 ```
 
 Se l'utente è proprietario vede le proprie prenotazioni. Se l'utente è sitter vede le richieste ricevute.
+Ogni prenotazione include anche i dati del pagamento, se già registrato.
 
 Filtri disponibili:
 
@@ -390,6 +391,15 @@ demo_card
 bank_transfer
 ```
 
+Con `demo_card` il pagamento viene registrato come pagato. Con `bank_transfer` il pagamento viene registrato come autorizzato e resta in attesa di conferma da parte del sitter.
+
+Conferma bonifico da parte del sitter:
+
+```text
+PATCH http://localhost:3000/api/payments/:id/confirm-bank-transfer
+Authorization: Bearer token_sitter
+```
+
 Risposte principali:
 
 ```text
@@ -474,6 +484,89 @@ Filtro per animale:
 
 ```bash
 curl "http://localhost:3000/api/sitters?petType=cane"
+```
+
+Profilo personale sitter:
+
+```text
+GET http://localhost:3000/api/sitters/me
+Authorization: Bearer token_sitter
+```
+
+```text
+PUT http://localhost:3000/api/sitters/me
+Authorization: Bearer token_sitter
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "bio": "Mi occupo di cani e gatti con esperienza.",
+  "baseCity": "Roma"
+}
+```
+
+Risposte principali:
+
+```text
+200 profilo restituito o aggiornato
+400 città base mancante
+401 token mancante o non valido
+403 ruolo non autorizzato
+```
+
+Animali accettati dal sitter:
+
+```text
+GET http://localhost:3000/api/sitters/me/pet-types
+Authorization: Bearer token_sitter
+```
+
+```text
+PUT http://localhost:3000/api/sitters/me/pet-types
+Authorization: Bearer token_sitter
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "petTypes": ["cane", "gatto"]
+}
+```
+
+Quando un animale viene rimosso dagli animali accettati, vengono rimossi anche i servizi del sitter collegati a quell'animale.
+
+Servizi configurabili dal sitter:
+
+```text
+GET http://localhost:3000/api/sitters/me/services
+Authorization: Bearer token_sitter
+```
+
+La risposta contiene solo i servizi compatibili con gli animali accettati dal sitter. Ogni riga indica servizio, animale, prezzo configurato e se il servizio è attivo.
+
+```text
+PUT http://localhost:3000/api/sitters/me/services
+Authorization: Bearer token_sitter
+Content-Type: application/json
+```
+
+Body JSON:
+
+```json
+{
+  "services": [
+    {
+      "serviceId": 1,
+      "petType": "cane",
+      "price": 12
+    }
+  ]
+}
 ```
 
 Account sitter demo:
