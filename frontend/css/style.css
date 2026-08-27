@@ -268,3 +268,28 @@ main {
         max-width: 100%;
     }
 }
+.sitter-service-row {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #ffffff;
+}
+
+.sitter-service-row-disabled {
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+.pet-type-check {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: #ffffff;
+}
+
+@media (max-width: 767px) {
+    .sitter-service-row .row {
+        row-gap: 0.75rem;
+    }
+}
