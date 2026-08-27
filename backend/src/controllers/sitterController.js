@@ -157,6 +157,45 @@ async function updateMyPetTypes(req, res, next) {
   }
 }
 
+async function listMyServices(req, res, next) {
+  try {
+    const sitterId = await findMySitterProfileId(req.user.id);
+
+    if (!sitterId) {
+      return res.status(400).json({
+        error: "Profilo sitter non configurato"
+      });
+    }
+
+    const result = await pool.query(
+      `select
+         s.id as service_id,
+         s.name,
+         s.description,
+         s.price_unit,
+         s.availability_mode,
+         spt.pet_type,
+         ss.price,
+         ss.service_id is not null as enabled
+       from service_pet_types spt
+       join services s on s.id = spt.service_id
+       join sitter_pet_types spet on spet.pet_type = spt.pet_type
+       left join sitter_services ss on ss.sitter_id = spet.sitter_id
+        and ss.service_id = s.id
+        and ss.pet_type = spt.pet_type
+       where spet.sitter_id = $1
+       order by s.name, spt.pet_type`,
+      [sitterId]
+    );
+
+    return res.json({
+      services: result.rows
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function listSitters(req, res, next) {
   try {
     const { city, petType, service } = req.query;
@@ -220,6 +259,7 @@ async function listSitters(req, res, next) {
 module.exports = {
   getMySitterProfile,
   listMyPetTypes,
+  listMyServices,
   updateMyPetTypes,
   updateMySitterProfile,
   listSitters

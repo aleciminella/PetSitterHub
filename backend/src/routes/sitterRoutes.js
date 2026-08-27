@@ -8,6 +8,7 @@ router.get("/me", verifyToken, requireRole("sitter"), sitterController.getMySitt
 router.put("/me", verifyToken, requireRole("sitter"), sitterController.updateMySitterProfile);
 router.get("/me/pet-types", verifyToken, requireRole("sitter"), sitterController.listMyPetTypes);
 router.put("/me/pet-types", verifyToken, requireRole("sitter"), sitterController.updateMyPetTypes);
+router.get("/me/services", verifyToken, requireRole("sitter"), sitterController.listMyServices);
 router.get("/", sitterController.listSitters);
 
 module.exports = router;

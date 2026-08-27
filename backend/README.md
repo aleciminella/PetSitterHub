@@ -540,6 +540,15 @@ Body JSON:
 
 Quando un animale viene rimosso dagli animali accettati, vengono rimossi anche i servizi del sitter collegati a quell'animale.
 
+Servizi configurabili dal sitter:
+
+```text
+GET http://localhost:3000/api/sitters/me/services
+Authorization: Bearer token_sitter
+```
+
+La risposta contiene solo i servizi compatibili con gli animali accettati dal sitter. Ogni riga indica servizio, animale, prezzo configurato e se il servizio è attivo.
+
 Account sitter demo:
 
 ```text
