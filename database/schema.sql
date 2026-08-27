@@ -98,6 +98,7 @@ create table sitter_availability_exceptions (
   starts_at time,
   ends_at time,
   note text,
+  unique (sitter_id, starts_on, ends_on),
   check (ends_on >= starts_on),
   check (
     (is_available = false and starts_at is null and ends_at is null)
