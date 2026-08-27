@@ -1,5 +1,8 @@
 const API_BASE_URL = "http://localhost:4000/api";
 let petsCache = [];
+let bookingsOffset = 0;
+let bookingsHasMore = false;
+const BOOKINGS_LIMIT = 5;
 
 function getSavedUser() {
     const savedUser = localStorage.getItem("petsitterhubUser");
@@ -159,6 +162,79 @@ function savePet(event) {
         }
     });
 }
+function formatDateTime(value) {
+    return new Date(value).toLocaleString("it-IT");
+}
+
+function getBookingStatusLabel(status) {
+    const labels = {
+        pending: "In attesa di conferma",
+        accepted: "Accettata",
+        rejected: "Richiesta rifiutata",
+        cancelled: "Annullata",
+        completed: "Completata"
+    };
+    return labels[status] || status;
+}
+
+function renderBookings(bookings, append) {
+    if (!append) {
+        $("#bookingsList").html("");
+    }
+    if (!bookings.length && !append) {
+        $("#bookingsList").html('<div class="empty-state">Nessuna prenotazione trovata.</div>');
+        $("#loadMoreBookingsButton").addClass("d-none");
+        return;
+    }
+
+    const html = bookings.map(function (booking) {
+        return `
+            <article class="booking-card" data-id="${booking.id}">
+                <div class="booking-card-header">
+                    <div>
+                        <h3 class="h5 mb-2">${booking.service_name}</h3>
+                        <p class="mb-1">Con: ${booking.sitter_first_name} ${booking.sitter_last_name}</p>
+                        <p class="mb-1">Animale: ${booking.pet_name} (${booking.pet_type})</p>
+                        <p class="mb-1">Dal ${formatDateTime(booking.starts_at)} al ${formatDateTime(booking.ends_at)}</p>
+                        <p class="mb-1">Totale: ${Number(booking.total_price).toFixed(2)} €</p>
+                        <p class="mb-0">${booking.notes || "Nessuna nota."}</p>
+                    </div>
+                    <span class="booking-status booking-status-${booking.status}">
+                        ${getBookingStatusLabel(booking.status)}
+                    </span>
+                </div>
+            </article>
+        `;
+    }).join("");
+
+    $("#bookingsList").append(html);
+    $("#loadMoreBookingsButton").toggleClass("d-none", !bookingsHasMore);
+}
+
+function loadBookings(append = false) {
+    if (!append) {
+        bookingsOffset = 0;
+        $("#bookingsList").html('<div class="empty-state">Caricamento prenotazioni...</div>');
+    }
+
+    const period = $("#bookingPeriod").val() || "future";
+
+    $.ajax({
+        url: `${API_BASE_URL}/bookings?period=${period}&limit=${BOOKINGS_LIMIT}&offset=${bookingsOffset}`,
+        method: "GET",
+        headers: authHeaders(),
+        success: function (response) {
+            const bookings = response.bookings || [];
+            bookingsHasMore = bookings.length === BOOKINGS_LIMIT;
+            bookingsOffset += bookings.length;
+            renderBookings(bookings, append);
+        },
+        error: function () {
+            $("#bookingsList").html('<div class="empty-state text-danger">Errore durante il caricamento delle prenotazioni.</div>');
+            $("#loadMoreBookingsButton").addClass("d-none");
+        }
+    });
+}
 
 $(document).ready(function () {
     if (!guardOwnerDashboard()) {
@@ -166,7 +242,15 @@ $(document).ready(function () {
     }
 
     loadPets();
+    loadBookings();
     $("#refreshPetsButton").on("click", loadPets);
+    $("#bookingPeriod").on("change", function () {
+        loadBookings();
+    });
+    
+    $("#loadMoreBookingsButton").on("click", function () {
+        loadBookings(true);
+    });
     $("#petForm").on("submit", savePet);
 
     $("#petsList").on("click", ".edit-pet-button", function () {
