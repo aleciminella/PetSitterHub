@@ -1,5 +1,8 @@
 const API_BASE_URL = "http://localhost:4000/api";
 let petsCache = [];
+let bookingsOffset = 0;
+let bookingsHasMore = false;
+const BOOKINGS_LIMIT = 5;
 
 function getSavedUser() {
     const savedUser = localStorage.getItem("petsitterhubUser");
@@ -159,6 +162,171 @@ function savePet(event) {
         }
     });
 }
+function formatDateTime(value) {
+    return new Date(value).toLocaleString("it-IT");
+}
+
+function getBookingStatusLabel(status) {
+    const labels = {
+        pending: "In attesa di conferma",
+        accepted: "Accettata",
+        rejected: "Richiesta rifiutata",
+        cancelled: "Annullata",
+        completed: "Completata"
+    };
+    return labels[status] || status;
+}
+
+function renderBookings(bookings, append) {
+    if (!append) {
+        $("#bookingsList").html("");
+    }
+    if (!bookings.length && !append) {
+        $("#bookingsList").html('<div class="empty-state">Nessuna prenotazione trovata.</div>');
+        $("#loadMoreBookingsButton").addClass("d-none");
+        return;
+    }
+
+    const html = bookings.map(function (booking) {
+        return `
+            <article class="booking-card" data-id="${booking.id}">
+                <div class="booking-card-header">
+                    <div>
+                        <h3 class="h5 mb-2">${booking.service_name}</h3>
+                        <p class="mb-1">Con: ${booking.sitter_first_name} ${booking.sitter_last_name}</p>
+                        <p class="mb-1">Animale: ${booking.pet_name} (${booking.pet_type})</p>
+                        <p class="mb-1">Dal ${formatDateTime(booking.starts_at)} al ${formatDateTime(booking.ends_at)}</p>
+                        <p class="mb-1">Totale: ${Number(booking.total_price).toFixed(2)} €</p>
+                        <p class="mb-0">${booking.notes || "Nessuna nota."}</p>
+                    </div>
+                    <span class="booking-status booking-status-${booking.status}">
+                        ${getBookingStatusLabel(booking.status)}
+                    </span>
+                </div>
+                ${["pending", "accepted"].includes(booking.status) ? `
+                    <div class="mt-3">
+                        <button class="btn btn-outline-danger btn-sm cancel-booking-button" type="button" data-id="${booking.id}">
+                            Annulla
+                        </button>
+                    </div>
+                ` : ""}
+                <div class="mt-3">
+                <button class="btn btn-outline-secondary btn-sm toggle-messages-button" type="button" data-id="${booking.id}">
+                    Messaggi
+                </button>
+            </div>
+            <div class="booking-message-box d-none" id="messages-${booking.id}">
+                <div class="booking-messages-list mb-3"></div>
+                <div class="d-flex gap-2">
+                    <input class="form-control message-input" type="text" placeholder="Scrivi un messaggio">
+                    <button class="btn btn-primary send-message-button" type="button" data-id="${booking.id}">
+                        Invia
+                    </button>
+                </div>
+            </div>
+            </article>
+        `;
+    }).join("");
+
+    $("#bookingsList").append(html);
+    $("#loadMoreBookingsButton").toggleClass("d-none", !bookingsHasMore);
+}
+
+function loadBookings(append = false) {
+    if (!append) {
+        bookingsOffset = 0;
+        $("#bookingsList").html('<div class="empty-state">Caricamento prenotazioni...</div>');
+    }
+
+    const period = $("#bookingPeriod").val() || "future";
+
+    $.ajax({
+        url: `${API_BASE_URL}/bookings?period=${period}&limit=${BOOKINGS_LIMIT}&offset=${bookingsOffset}`,
+        method: "GET",
+        headers: authHeaders(),
+        success: function (response) {
+            const bookings = response.bookings || [];
+            bookingsHasMore = bookings.length === BOOKINGS_LIMIT;
+            bookingsOffset += bookings.length;
+            renderBookings(bookings, append);
+        },
+        error: function () {
+            $("#bookingsList").html('<div class="empty-state text-danger">Errore durante il caricamento delle prenotazioni.</div>');
+            $("#loadMoreBookingsButton").addClass("d-none");
+        }
+    });
+}
+function cancelBooking(bookingId) {
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/cancel`,
+        method: "PATCH",
+        headers: authHeaders(),
+        success: function () {
+            loadBookings();
+        },
+        error: function () {
+            $("#bookingsMessage")
+                .removeClass("d-none alert-success")
+                .addClass("alert-danger")
+                .text("Errore durante l'annullamento della prenotazione.");
+        }
+    });
+}
+function renderMessages(container, messages) {
+    if (!messages.length) {
+        container.html('<div class="text-muted">Nessun messaggio.</div>');
+        return;
+    }
+    container.html(messages.map(function (message) {
+        return `
+            <div class="booking-message-item">
+                <strong>${message.sender_first_name} ${message.sender_last_name}</strong>
+                <p class="mb-0">${message.body}</p>
+            </div>
+        `;
+    }).join(""));
+}
+
+function loadMessages(bookingId) {
+    const box = $(`#messages-${bookingId}`);
+    const list = box.find(".booking-messages-list");
+    list.html('<div class="text-muted">Caricamento messaggi...</div>');
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/messages`,
+        method: "GET",
+        headers: authHeaders(),
+        success: function (response) {
+            renderMessages(list, response.messages || []);
+        },
+        error: function () {
+            list.html('<div class="text-danger">Errore durante il caricamento dei messaggi.</div>');
+        }
+    });
+}
+
+function sendMessage(bookingId, input) {
+    const body = input.val().trim();
+    if (!body) {
+        return;
+    }
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/messages`,
+        method: "POST",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify({ body }),
+        success: function () {
+            input.val("");
+            loadMessages(bookingId);
+        },
+        error: function () {
+            $("#bookingsMessage")
+                .removeClass("d-none alert-success")
+                .addClass("alert-danger")
+                .text("Errore durante l'invio del messaggio.");
+        }
+    });
+}
 
 $(document).ready(function () {
     if (!guardOwnerDashboard()) {
@@ -166,7 +334,15 @@ $(document).ready(function () {
     }
 
     loadPets();
+    loadBookings();
     $("#refreshPetsButton").on("click", loadPets);
+    $("#bookingPeriod").on("change", function () {
+        loadBookings();
+    });
+    
+    $("#loadMoreBookingsButton").on("click", function () {
+        loadBookings(true);
+    });
     $("#petForm").on("submit", savePet);
 
     $("#petsList").on("click", ".edit-pet-button", function () {
@@ -178,4 +354,22 @@ $(document).ready(function () {
     });
 
     $("#cancelEditPetButton").on("click", resetPetForm);
+    $("#bookingsList").on("click", ".cancel-booking-button", function () {
+        cancelBooking($(this).data("id"));
+    });
+    
+    $("#bookingsList").on("click", ".toggle-messages-button", function () {
+        const bookingId = $(this).data("id");
+        const box = $(`#messages-${bookingId}`);
+        box.toggleClass("d-none");
+        if (!box.hasClass("d-none")) {
+            loadMessages(bookingId);
+        }
+    });
+    
+    $("#bookingsList").on("click", ".send-message-button", function () {
+        const bookingId = $(this).data("id");
+        const input = $(`#messages-${bookingId}`).find(".message-input");
+        sendMessage(bookingId, input);
+    });
 });
