@@ -84,6 +84,47 @@ from users
 where email = 'luca.sitter@example.com'
 on conflict (user_id) do nothing;
 
+insert into sitter_weekly_availability (sitter_id, weekday, is_available, starts_at, ends_at)
+select sp.id, weekly_availability.weekday, weekly_availability.is_available, weekly_availability.starts_at::time, weekly_availability.ends_at::time
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join (
+  values
+    ('giulia.sitter@example.com', 0, false, null, null),
+    ('giulia.sitter@example.com', 1, true, '08:00', '20:00'),
+    ('giulia.sitter@example.com', 2, true, '07:00', '13:00'),
+    ('giulia.sitter@example.com', 3, true, '07:00', '13:00'),
+    ('giulia.sitter@example.com', 4, true, '07:00', '13:00'),
+    ('giulia.sitter@example.com', 5, true, '07:00', '13:00'),
+    ('giulia.sitter@example.com', 6, false, null, null),
+    ('luca.sitter@example.com', 0, false, null, null),
+    ('luca.sitter@example.com', 1, true, '09:00', '18:00'),
+    ('luca.sitter@example.com', 2, true, '09:00', '18:00'),
+    ('luca.sitter@example.com', 3, true, '09:00', '18:00'),
+    ('luca.sitter@example.com', 4, true, '09:00', '18:00'),
+    ('luca.sitter@example.com', 5, true, '09:00', '18:00'),
+    ('luca.sitter@example.com', 6, true, '10:00', '13:00')
+) as weekly_availability(email, weekday, is_available, starts_at, ends_at) on weekly_availability.email = u.email
+on conflict (sitter_id, weekday) do update set
+  is_available = excluded.is_available,
+  starts_at = excluded.starts_at,
+  ends_at = excluded.ends_at;
+
+insert into sitter_availability_exceptions (sitter_id, starts_on, ends_on, is_available, starts_at, ends_at, note)
+select sp.id, availability_exception.starts_on::date, availability_exception.ends_on::date, availability_exception.is_available, availability_exception.starts_at::time, availability_exception.ends_at::time, availability_exception.note
+from sitter_profiles sp
+join users u on u.id = sp.user_id
+join (
+  values
+    ('giulia.sitter@example.com', '2026-09-10', '2026-09-12', false, null, null, 'Ferie'),
+    ('luca.sitter@example.com', '2026-09-25', '2026-09-25', true, '10:00', '16:00', 'Orario speciale')
+) as availability_exception(email, starts_on, ends_on, is_available, starts_at, ends_at, note) on availability_exception.email = u.email
+on conflict (sitter_id, starts_on, ends_on) do update set
+  is_available = excluded.is_available,
+  starts_at = excluded.starts_at,
+  ends_at = excluded.ends_at,
+  note = excluded.note;
+
 insert into sitter_pet_types (sitter_id, pet_type)
 select sp.id, accepted_pet.pet_type
 from sitter_profiles sp
