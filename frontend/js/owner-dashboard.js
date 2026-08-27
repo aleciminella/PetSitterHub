@@ -210,6 +210,20 @@ function renderBookings(bookings, append) {
                         </button>
                     </div>
                 ` : ""}
+                <div class="mt-3">
+                <button class="btn btn-outline-secondary btn-sm toggle-messages-button" type="button" data-id="${booking.id}">
+                    Messaggi
+                </button>
+            </div>
+            <div class="booking-message-box d-none" id="messages-${booking.id}">
+                <div class="booking-messages-list mb-3"></div>
+                <div class="d-flex gap-2">
+                    <input class="form-control message-input" type="text" placeholder="Scrivi un messaggio">
+                    <button class="btn btn-primary send-message-button" type="button" data-id="${booking.id}">
+                        Invia
+                    </button>
+                </div>
+            </div>
             </article>
         `;
     }).join("");
@@ -258,6 +272,61 @@ function cancelBooking(bookingId) {
         }
     });
 }
+function renderMessages(container, messages) {
+    if (!messages.length) {
+        container.html('<div class="text-muted">Nessun messaggio.</div>');
+        return;
+    }
+    container.html(messages.map(function (message) {
+        return `
+            <div class="booking-message-item">
+                <strong>${message.sender_first_name} ${message.sender_last_name}</strong>
+                <p class="mb-0">${message.body}</p>
+            </div>
+        `;
+    }).join(""));
+}
+
+function loadMessages(bookingId) {
+    const box = $(`#messages-${bookingId}`);
+    const list = box.find(".booking-messages-list");
+    list.html('<div class="text-muted">Caricamento messaggi...</div>');
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/messages`,
+        method: "GET",
+        headers: authHeaders(),
+        success: function (response) {
+            renderMessages(list, response.messages || []);
+        },
+        error: function () {
+            list.html('<div class="text-danger">Errore durante il caricamento dei messaggi.</div>');
+        }
+    });
+}
+
+function sendMessage(bookingId, input) {
+    const body = input.val().trim();
+    if (!body) {
+        return;
+    }
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/messages`,
+        method: "POST",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify({ body }),
+        success: function () {
+            input.val("");
+            loadMessages(bookingId);
+        },
+        error: function () {
+            $("#bookingsMessage")
+                .removeClass("d-none alert-success")
+                .addClass("alert-danger")
+                .text("Errore durante l'invio del messaggio.");
+        }
+    });
+}
 
 $(document).ready(function () {
     if (!guardOwnerDashboard()) {
@@ -287,5 +356,20 @@ $(document).ready(function () {
     $("#cancelEditPetButton").on("click", resetPetForm);
     $("#bookingsList").on("click", ".cancel-booking-button", function () {
         cancelBooking($(this).data("id"));
+    });
+    
+    $("#bookingsList").on("click", ".toggle-messages-button", function () {
+        const bookingId = $(this).data("id");
+        const box = $(`#messages-${bookingId}`);
+        box.toggleClass("d-none");
+        if (!box.hasClass("d-none")) {
+            loadMessages(bookingId);
+        }
+    });
+    
+    $("#bookingsList").on("click", ".send-message-button", function () {
+        const bookingId = $(this).data("id");
+        const input = $(`#messages-${bookingId}`).find(".message-input");
+        sendMessage(bookingId, input);
     });
 });
