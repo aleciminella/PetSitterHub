@@ -273,6 +273,41 @@ async function updateMyServices(req, res, next) {
   }
 }
 
+async function getMyAvailability(req, res, next) {
+  try {
+    const sitterId = await findMySitterProfileId(req.user.id);
+
+    if (!sitterId) {
+      return res.status(400).json({
+        error: "Profilo sitter non configurato"
+      });
+    }
+
+    const weeklyResult = await pool.query(
+      `select weekday, is_available, starts_at, ends_at
+       from sitter_weekly_availability
+       where sitter_id = $1
+       order by weekday`,
+      [sitterId]
+    );
+
+    const exceptionResult = await pool.query(
+      `select id, starts_on, ends_on, is_available, starts_at, ends_at, note
+       from sitter_availability_exceptions
+       where sitter_id = $1
+       order by starts_on desc, id desc`,
+      [sitterId]
+    );
+
+    return res.json({
+      weeklyAvailability: weeklyResult.rows,
+      exceptions: exceptionResult.rows
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function listSitters(req, res, next) {
   try {
     const { city, petType, service } = req.query;
@@ -334,6 +369,7 @@ async function listSitters(req, res, next) {
 }
 
 module.exports = {
+  getMyAvailability,
   getMySitterProfile,
   listMyPetTypes,
   listMyServices,

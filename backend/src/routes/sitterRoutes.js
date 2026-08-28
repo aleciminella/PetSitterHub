@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.get("/me", verifyToken, requireRole("sitter"), sitterController.getMySitterProfile);
 router.put("/me", verifyToken, requireRole("sitter"), sitterController.updateMySitterProfile);
+router.get("/me/availability", verifyToken, requireRole("sitter"), sitterController.getMyAvailability);
 router.get("/me/pet-types", verifyToken, requireRole("sitter"), sitterController.listMyPetTypes);
 router.put("/me/pet-types", verifyToken, requireRole("sitter"), sitterController.updateMyPetTypes);
 router.get("/me/services", verifyToken, requireRole("sitter"), sitterController.listMyServices);
