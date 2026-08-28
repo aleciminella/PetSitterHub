@@ -8,6 +8,7 @@ router.get("/me", verifyToken, requireRole("sitter"), sitterController.getMySitt
 router.put("/me", verifyToken, requireRole("sitter"), sitterController.updateMySitterProfile);
 router.get("/me/availability", verifyToken, requireRole("sitter"), sitterController.getMyAvailability);
 router.put("/me/availability/weekly", verifyToken, requireRole("sitter"), sitterController.updateMyWeeklyAvailability);
+router.put("/me/availability/exceptions", verifyToken, requireRole("sitter"), sitterController.updateMyAvailabilityExceptions);
 router.get("/me/pet-types", verifyToken, requireRole("sitter"), sitterController.listMyPetTypes);
 router.put("/me/pet-types", verifyToken, requireRole("sitter"), sitterController.updateMyPetTypes);
 router.get("/me/services", verifyToken, requireRole("sitter"), sitterController.listMyServices);

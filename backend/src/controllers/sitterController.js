@@ -341,6 +341,42 @@ function cleanWeeklyAvailabilityItem(item) {
   };
 }
 
+function isValidDate(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function cleanAvailabilityExceptionItem(item) {
+  const isAvailable = item.isAvailable;
+
+  if (!isValidDate(item.startsOn) || !isValidDate(item.endsOn) || item.endsOn < item.startsOn || typeof isAvailable !== "boolean") {
+    return null;
+  }
+
+  if (!isAvailable) {
+    return {
+      startsOn: item.startsOn,
+      endsOn: item.endsOn,
+      isAvailable: false,
+      startsAt: null,
+      endsAt: null,
+      note: item.note || null
+    };
+  }
+
+  if (!isValidTime(item.startsAt) || !isValidTime(item.endsAt) || item.endsAt <= item.startsAt) {
+    return null;
+  }
+
+  return {
+    startsOn: item.startsOn,
+    endsOn: item.endsOn,
+    isAvailable: true,
+    startsAt: item.startsAt,
+    endsAt: item.endsAt,
+    note: item.note || null
+  };
+}
+
 async function updateMyWeeklyAvailability(req, res, next) {
   const client = await pool.connect();
 
@@ -399,6 +435,74 @@ async function updateMyWeeklyAvailability(req, res, next) {
 
     return res.json({
       weeklyAvailability: result.rows
+    });
+  } catch (err) {
+    await client.query("rollback");
+    return next(err);
+  } finally {
+    client.release();
+  }
+}
+
+async function updateMyAvailabilityExceptions(req, res, next) {
+  const client = await pool.connect();
+
+  try {
+    const { exceptions } = req.body;
+
+    if (!Array.isArray(exceptions)) {
+      return res.status(400).json({
+        error: "Eccezioni disponibilità non valide"
+      });
+    }
+
+    const sitterId = await findMySitterProfileId(req.user.id);
+
+    if (!sitterId) {
+      return res.status(400).json({
+        error: "Profilo sitter non configurato"
+      });
+    }
+
+    const cleanedExceptions = exceptions.map(cleanAvailabilityExceptionItem);
+
+    if (cleanedExceptions.some((item) => item === null)) {
+      return res.status(400).json({
+        error: "Data o orario speciale non valido"
+      });
+    }
+
+    await client.query("begin");
+    await client.query("delete from sitter_availability_exceptions where sitter_id = $1", [sitterId]);
+
+    for (const exception of cleanedExceptions) {
+      await client.query(
+        `insert into sitter_availability_exceptions (sitter_id, starts_on, ends_on, is_available, starts_at, ends_at, note)
+         values ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          sitterId,
+          exception.startsOn,
+          exception.endsOn,
+          exception.isAvailable,
+          exception.startsAt,
+          exception.endsAt,
+          exception.note
+        ]
+      );
+    }
+
+    const result = await client.query(
+      `select id, starts_on, ends_on, is_available, starts_at, ends_at, note
+       from sitter_availability_exceptions
+       where sitter_id = $1
+       order by starts_on desc, id desc`,
+      [sitterId]
+    );
+
+    await client.query("commit");
+
+    return res.json({
+      exceptions: result.rows
     });
   } catch (err) {
     await client.query("rollback");
@@ -473,6 +577,7 @@ module.exports = {
   getMySitterProfile,
   listMyPetTypes,
   listMyServices,
+  updateMyAvailabilityExceptions,
   updateMyPetTypes,
   updateMyWeeklyAvailability,
   updateMyServices,
