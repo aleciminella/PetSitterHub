@@ -308,6 +308,106 @@ async function getMyAvailability(req, res, next) {
   }
 }
 
+function isValidTime(value) {
+  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function cleanWeeklyAvailabilityItem(item) {
+  const weekday = Number(item.weekday);
+  const isAvailable = item.isAvailable;
+
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6 || typeof isAvailable !== "boolean") {
+    return null;
+  }
+
+  if (!isAvailable) {
+    return {
+      weekday,
+      isAvailable: false,
+      startsAt: null,
+      endsAt: null
+    };
+  }
+
+  if (!isValidTime(item.startsAt) || !isValidTime(item.endsAt) || item.endsAt <= item.startsAt) {
+    return null;
+  }
+
+  return {
+    weekday,
+    isAvailable: true,
+    startsAt: item.startsAt,
+    endsAt: item.endsAt
+  };
+}
+
+async function updateMyWeeklyAvailability(req, res, next) {
+  const client = await pool.connect();
+
+  try {
+    const { weeklyAvailability } = req.body;
+
+    if (!Array.isArray(weeklyAvailability)) {
+      return res.status(400).json({
+        error: "Disponibilità settimanale non valida"
+      });
+    }
+
+    const sitterId = await findMySitterProfileId(req.user.id);
+
+    if (!sitterId) {
+      return res.status(400).json({
+        error: "Profilo sitter non configurato"
+      });
+    }
+
+    const cleanedAvailability = weeklyAvailability.map(cleanWeeklyAvailabilityItem);
+    const uniqueWeekdays = new Set(cleanedAvailability.map((item) => item && item.weekday));
+
+    if (cleanedAvailability.some((item) => item === null)) {
+      return res.status(400).json({
+        error: "Giorno o orario non valido"
+      });
+    }
+
+    if (uniqueWeekdays.size !== cleanedAvailability.length) {
+      return res.status(400).json({
+        error: "Giorni duplicati nella disponibilità"
+      });
+    }
+
+    await client.query("begin");
+    await client.query("delete from sitter_weekly_availability where sitter_id = $1", [sitterId]);
+
+    for (const item of cleanedAvailability) {
+      await client.query(
+        `insert into sitter_weekly_availability (sitter_id, weekday, is_available, starts_at, ends_at)
+         values ($1, $2, $3, $4, $5)`,
+        [sitterId, item.weekday, item.isAvailable, item.startsAt, item.endsAt]
+      );
+    }
+
+    const result = await client.query(
+      `select weekday, is_available, starts_at, ends_at
+       from sitter_weekly_availability
+       where sitter_id = $1
+       order by weekday`,
+      [sitterId]
+    );
+
+    await client.query("commit");
+
+    return res.json({
+      weeklyAvailability: result.rows
+    });
+  } catch (err) {
+    await client.query("rollback");
+    return next(err);
+  } finally {
+    client.release();
+  }
+}
+
 async function listSitters(req, res, next) {
   try {
     const { city, petType, service } = req.query;
@@ -374,6 +474,7 @@ module.exports = {
   listMyPetTypes,
   listMyServices,
   updateMyPetTypes,
+  updateMyWeeklyAvailability,
   updateMyServices,
   updateMySitterProfile,
   listSitters
