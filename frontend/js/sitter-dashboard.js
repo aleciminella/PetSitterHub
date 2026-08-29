@@ -6,6 +6,17 @@ const PET_TYPES = [
     { value: "roditore", label: "Roditore" },
     { value: "rettile", label: "Rettile" }
 ];
+const WEEK_DAYS = [
+    { value: 0, label: "Domenica" },
+    { value: 1, label: "Lunedì" },
+    { value: 2, label: "Martedì" },
+    { value: 3, label: "Mercoledì" },
+    { value: 4, label: "Giovedì" },
+    { value: 5, label: "Venerdì" },
+    { value: 6, label: "Sabato" }
+];
+
+let availabilityExceptions = [];
 
 function getSavedUser() {
     const savedUser = localStorage.getItem("petsitterhubUser");
@@ -251,6 +262,89 @@ function saveServices(event) {
     });
 }
 
+function formatTime(value) {
+    return value ? String(value).slice(0, 5) : "";
+}
+
+function formatDate(value) {
+    if (!value) {
+        return "";
+    }
+    return String(value).slice(0, 10);
+}
+
+function renderWeeklyAvailability(weeklyAvailability) {
+    $("#weeklyAvailabilityList").html(WEEK_DAYS.map(function (day) {
+        const current = weeklyAvailability.find(function (item) {
+            return Number(item.weekday) === day.value;
+        }) || {};
+        const checked = current.is_available ? "checked" : "";
+        const disabled = current.is_available ? "" : "disabled";
+        const rowClass = current.is_available ? "" : "weekly-availability-row-disabled";
+        return `
+            <div class="weekly-availability-row ${rowClass}" data-weekday="${day.value}">
+                <div class="d-flex flex-column flex-lg-row gap-3 align-items-lg-center">
+                    <div class="availability-day-name">${day.label}</div>
+                    <label class="form-check d-flex gap-2 align-items-center mb-0">
+                        <input class="form-check-input weekly-available-input" type="checkbox" ${checked}>
+                        <span>Disponibile</span>
+                    </label>
+                    <input class="form-control availability-time-input weekly-start-input" type="time" value="${formatTime(current.starts_at)}" ${disabled}>
+                    <input class="form-control availability-time-input weekly-end-input" type="time" value="${formatTime(current.ends_at)}" ${disabled}>
+                </div>
+            </div>
+        `;
+    }).join(""));
+}
+
+function renderAvailabilityExceptions() {
+    if (!availabilityExceptions.length) {
+        $("#availabilityExceptionsList").html('<div class="empty-state">Nessuna chiusura o data speciale configurata.</div>');
+        return;
+    }
+    $("#availabilityExceptionsList").html(availabilityExceptions.map(function (exception, index) {
+        const label = exception.isAvailable ? "Orario speciale" : "Chiusura";
+        const timeText = exception.isAvailable ? `, ${exception.startsAt} - ${exception.endsAt}` : "";
+        return `
+            <article class="availability-exception-item">
+                <div>
+                    <h4 class="h6 mb-1">${label}</h4>
+                    <p class="mb-1">Dal ${exception.startsOn} al ${exception.endsOn}${timeText}</p>
+                    <p class="text-muted mb-0">${exception.note || "Nessuna nota."}</p>
+                </div>
+                <button class="btn btn-outline-danger btn-sm remove-exception-button" type="button" data-index="${index}">
+                    Elimina
+                </button>
+            </article>
+        `;
+    }).join(""));
+}
+
+function loadAvailability() {
+    $.ajax({
+        url: `${API_BASE_URL}/sitters/me/availability`,
+        method: "GET",
+        headers: authHeaders(),
+        success: function (response) {
+            renderWeeklyAvailability(response.weeklyAvailability || []);
+            availabilityExceptions = (response.exceptions || []).map(function (exception) {
+                return {
+                    startsOn: formatDate(exception.starts_on),
+                    endsOn: formatDate(exception.ends_on),
+                    isAvailable: exception.is_available,
+                    startsAt: formatTime(exception.starts_at),
+                    endsAt: formatTime(exception.ends_at),
+                    note: exception.note || ""
+                };
+            });
+            renderAvailabilityExceptions();
+        },
+        error: function () {
+            showMessage("#availabilityMessage", "danger", "Errore durante il caricamento della disponibilità.");
+        }
+    });
+}
+
 $(document).ready(function () {
     if (!guardSitterDashboard()) {
         return;
@@ -258,8 +352,17 @@ $(document).ready(function () {
     loadProfile();
     loadPetTypes();
     loadServices();
+    loadAvailability(); 
     $("#profileForm").on("submit", saveProfile);
     $("#petTypesForm").on("submit", savePetTypes);
     $("#servicesForm").on("submit", saveServices);
     $("#refreshServicesButton").on("click", loadServices);
+    $("#refreshAvailabilityButton").on("click", loadAvailability);
+
+$("#weeklyAvailabilityList").on("change", ".weekly-available-input", function () {
+    const row = $(this).closest(".weekly-availability-row");
+    const enabled = $(this).is(":checked");
+    row.toggleClass("weekly-availability-row-disabled", !enabled);
+    row.find(".weekly-start-input, .weekly-end-input").prop("disabled", !enabled);
+});
 });
