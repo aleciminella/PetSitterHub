@@ -382,6 +382,49 @@ function saveWeeklyAvailability(event) {
     });
 }
 
+function saveAvailabilityExceptions() {
+    $.ajax({
+        url: `${API_BASE_URL}/sitters/me/availability/exceptions`,
+        method: "PUT",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify({
+            exceptions: availabilityExceptions
+        }),
+        success: function () {
+            showMessage("#availabilityMessage", "success", "Chiusure e orari speciali salvati correttamente.");
+            loadAvailability();
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.error
+                ? xhr.responseJSON.error
+                : "Errore durante il salvataggio delle eccezioni.";
+            showMessage("#availabilityMessage", "danger", message);
+        }
+    });
+}
+
+function addAvailabilityException(event) {
+    event.preventDefault();
+    hideMessage("#availabilityMessage");
+    const isSpecial = $("#exceptionType").val() === "special";
+    availabilityExceptions.push({
+        startsOn: $("#exceptionStartsOn").val(),
+        endsOn: $("#exceptionEndsOn").val(),
+        isAvailable: isSpecial,
+        startsAt: isSpecial ? $("#exceptionStartsAt").val() : null,
+        endsAt: isSpecial ? $("#exceptionEndsAt").val() : null,
+        note: $("#exceptionNote").val()
+    });
+    $("#exceptionForm")[0].reset();
+    saveAvailabilityExceptions();
+}
+
+function removeAvailabilityException(index) {
+    availabilityExceptions.splice(index, 1);
+    saveAvailabilityExceptions();
+}
+
 $(document).ready(function () {
     if (!guardSitterDashboard()) {
         return;
@@ -403,4 +446,16 @@ $("#weeklyAvailabilityList").on("change", ".weekly-available-input", function ()
     row.find(".weekly-start-input, .weekly-end-input").prop("disabled", !enabled);
 });
 $("#weeklyAvailabilityForm").on("submit", saveWeeklyAvailability); 
+$("#exceptionForm").on("submit", addAvailabilityException);
+
+$("#availabilityExceptionsList").on("click", ".remove-exception-button", function () {
+    removeAvailabilityException(Number($(this).data("index")));
+});
+
+$("#exceptionType").on("change", function () {
+    const isSpecial = $(this).val() === "special";
+    $("#exceptionStartsAt, #exceptionEndsAt").prop("disabled", !isSpecial);
+});
+
+$("#exceptionType").trigger("change");
 });
