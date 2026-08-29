@@ -345,6 +345,43 @@ function loadAvailability() {
     });
 }
 
+function getWeeklyAvailabilityData() {
+    return $(".weekly-availability-row").map(function () {
+        const row = $(this);
+        const isAvailable = row.find(".weekly-available-input").is(":checked");
+        return {
+            weekday: Number(row.data("weekday")),
+            isAvailable,
+            startsAt: isAvailable ? row.find(".weekly-start-input").val() : null,
+            endsAt: isAvailable ? row.find(".weekly-end-input").val() : null
+        };
+    }).get();
+}
+
+function saveWeeklyAvailability(event) {
+    event.preventDefault();
+    hideMessage("#availabilityMessage");
+    $.ajax({
+        url: `${API_BASE_URL}/sitters/me/availability/weekly`,
+        method: "PUT",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify({
+            weeklyAvailability: getWeeklyAvailabilityData()
+        }),
+        success: function () {
+            showMessage("#availabilityMessage", "success", "Disponibilità settimanale salvata correttamente.");
+            loadAvailability();
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.error
+                ? xhr.responseJSON.error
+                : "Errore durante il salvataggio della disponibilità.";
+            showMessage("#availabilityMessage", "danger", message);
+        }
+    });
+}
+
 $(document).ready(function () {
     if (!guardSitterDashboard()) {
         return;
@@ -365,4 +402,5 @@ $("#weeklyAvailabilityList").on("change", ".weekly-available-input", function ()
     row.toggleClass("weekly-availability-row-disabled", !enabled);
     row.find(".weekly-start-input, .weekly-end-input").prop("disabled", !enabled);
 });
+$("#weeklyAvailabilityForm").on("submit", saveWeeklyAvailability); 
 });
