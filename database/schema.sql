@@ -136,6 +136,20 @@ create table messages (
   sent_at timestamptz not null default now()
 );
 
+create table notifications (
+  id bigserial primary key,
+  user_id bigint not null references users(id) on delete cascade,
+  booking_id bigint references bookings(id) on delete cascade,
+  type varchar(40) not null
+    check (type in ('booking_created', 'booking_accepted', 'booking_rejected', 'booking_cancelled', 'payment_required', 'payment_received', 'payment_refunded', 'message_received', 'review_received')),
+  title varchar(120) not null,
+  body text not null,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index notifications_user_created_idx on notifications(user_id, created_at desc);
+
 create table reviews (
   id bigserial primary key,
   booking_id bigint not null unique references bookings(id) on delete cascade,
