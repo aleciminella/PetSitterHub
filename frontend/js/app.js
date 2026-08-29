@@ -8,6 +8,7 @@ function getSavedUser() {
 
 function logout() {
     localStorage.removeItem("petsitterhubUser");
+    localStorage.removeItem("petsitterhubToken");
     window.location.href = "/index.html";
 }
 
@@ -19,6 +20,7 @@ function updateNavbar() {
     const onHome = currentPage === "index.html";
     const onServices = currentPage === "services.html";
     const onOwnerDashboard = currentPage === "owner-dashboard.html";
+    const onSitterDashboard = currentPage === "sitter-dashboard.html";
 
     if (!$("#navbarActions").length) {
         return;
@@ -28,6 +30,7 @@ function updateNavbar() {
         ${onHome ? "" : `<li class="nav-item"><a class="nav-link" href="${prefix}index.html#search">Cerca sitter</a></li>`}
         ${onServices ? "" : `<li class="nav-item"><a class="nav-link" href="${prefix}pages/services.html">Servizi</a></li>`}
         ${user && user.role === "owner" && !onOwnerDashboard ? `<li class="nav-item"><a class="nav-link" href="${prefix}pages/owner-dashboard.html">Dashboard</a></li>` : ""}
+        ${user && user.role === "sitter" && !onSitterDashboard ? `<li class="nav-item"><a class="nav-link" href="${prefix}pages/sitter-dashboard.html">Area sitter</a></li>` : ""}
     `);
 
     if (!user) {
