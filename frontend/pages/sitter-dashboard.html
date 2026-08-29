@@ -69,6 +69,56 @@
                     <button type="submit" class="btn btn-primary mt-3">Salva servizi</button>
                 </form>
             </div>
+
+            <div class="dashboard-panel dashboard-panel-full">
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Disponibilità</h2>
+                        <p class="text-muted mb-0">Imposta giorni, orari standard e chiusure speciali.</p>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm align-self-md-start" type="button" id="refreshAvailabilityButton">Aggiorna</button>
+                </div>
+                <div id="availabilityMessage" class="alert d-none" role="alert"></div>
+                <form id="weeklyAvailabilityForm">
+                    <div id="weeklyAvailabilityList"></div>
+                    <button type="submit" class="btn btn-primary mt-3">Salva disponibilità settimanale</button>
+                </form>
+                <hr class="my-4">
+                <h3 class="h5 mb-3">Chiusure e orari speciali</h3>
+                <form id="exceptionForm" class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label for="exceptionStartsOn" class="form-label">Dal</label>
+                        <input type="date" class="form-control" id="exceptionStartsOn" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="exceptionEndsOn" class="form-label">Al</label>
+                        <input type="date" class="form-control" id="exceptionEndsOn" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="exceptionStartsAt" class="form-label">Dalle</label>
+                        <input type="time" class="form-control" id="exceptionStartsAt">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="exceptionEndsAt" class="form-label">Alle</label>
+                        <input type="time" class="form-control" id="exceptionEndsAt">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="exceptionType" class="form-label">Tipo</label>
+                        <select class="form-select" id="exceptionType">
+                            <option value="closed">Chiusura</option>
+                            <option value="special">Orario speciale</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label for="exceptionNote" class="form-label">Nota</label>
+                        <input type="text" class="form-control" id="exceptionNote" placeholder="Es. ferie, visita, orario speciale">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-outline-primary">Aggiungi eccezione</button>
+                    </div>
+                </form>
+                <div id="availabilityExceptionsList"></div>
+            </div>
         </section>
     </main>
 
