@@ -9,5 +9,6 @@ router.post("/", verifyToken, requireRole("owner"), bookingController.createBook
 router.patch("/:id/accept", verifyToken, requireRole("sitter"), bookingController.acceptBooking);
 router.patch("/:id/reject", verifyToken, requireRole("sitter"), bookingController.rejectBooking);
 router.patch("/:id/cancel", verifyToken, requireRole("owner"), bookingController.cancelBooking);
+router.patch("/:id/cancel-by-sitter", verifyToken, requireRole("sitter"), bookingController.cancelBookingBySitter);
 
 module.exports = router;
