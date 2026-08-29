@@ -452,9 +452,61 @@ async function cancelBooking(req, res, next) {
   }
 }
 
+async function cancelBookingBySitter(req, res, next) {
+  const client = await pool.connect();
+
+  try {
+    const booking = await findBookingForSitter(req.params.id, req.user.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        error: "Prenotazione non trovata"
+      });
+    }
+
+    if (booking.status !== "accepted") {
+      return res.status(400).json({
+        error: "Solo le prenotazioni accettate possono essere annullate dal sitter"
+      });
+    }
+
+    await client.query("begin");
+
+    const bookingResult = await client.query(
+      `update bookings
+       set status = 'cancelled', updated_at = now()
+       where id = $1
+       returning id, status, updated_at`,
+      [req.params.id]
+    );
+
+    const paymentResult = await client.query(
+      `update payments
+       set status = 'refunded'
+       where booking_id = $1
+         and status in ('authorized', 'paid')
+       returning id, booking_id, amount, method, status, provider_reference, created_at`,
+      [req.params.id]
+    );
+
+    await client.query("commit");
+
+    return res.json({
+      booking: bookingResult.rows[0],
+      payment: paymentResult.rows[0] || null
+    });
+  } catch (err) {
+    await client.query("rollback");
+    return next(err);
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   acceptBooking,
   cancelBooking,
+  cancelBookingBySitter,
   createBooking,
   listBookings,
   rejectBooking
