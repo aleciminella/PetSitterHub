@@ -293,3 +293,43 @@ main {
         row-gap: 0.75rem;
     }
 }
+
+.weekly-availability-row,
+.availability-exception-item {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #ffffff;
+}
+
+.weekly-availability-row-disabled {
+    background: #f8f9fa;
+}
+
+.availability-day-name {
+    min-width: 110px;
+    font-weight: 700;
+}
+
+.availability-time-input {
+    max-width: 160px;
+}
+
+.availability-exception-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+@media (max-width: 767px) {
+    .weekly-availability-row,
+    .availability-exception-item {
+        flex-direction: column;
+    }
+
+    .availability-time-input {
+        max-width: 100%;
+    }
+}
