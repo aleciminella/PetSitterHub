@@ -1,5 +1,13 @@
 const pool = require("../db/pool");
 
+async function createNotification(userId, bookingId, title, body) {
+  await pool.query(
+    `insert into notifications (user_id, booking_id, type, title, body)
+     values ($1, $2, 'review_received', $3, $4)`,
+    [userId, bookingId, title, body]
+  );
+}
+
 async function listSitterReviews(req, res, next) {
   try {
     const result = await pool.query(
@@ -37,11 +45,12 @@ async function createReview(req, res, next) {
     }
 
     const bookingResult = await pool.query(
-      `select id, sitter_id
-       from bookings
-       where id = $1
+      `select b.id, b.sitter_id, sp.user_id as sitter_user_id
+       from bookings b
+       join sitter_profiles sp on sp.id = b.sitter_id
+       where b.id = $1
          and owner_id = $2
-         and status = 'completed'`,
+         and b.status = 'completed'`,
       [req.params.bookingId, req.user.id]
     );
 
@@ -64,6 +73,13 @@ async function createReview(req, res, next) {
         parsedRating,
         comment || null
       ]
+    );
+
+    await createNotification(
+      booking.sitter_user_id,
+      booking.id,
+      "Nuova recensione ricevuta",
+      `Hai ricevuto una recensione da ${parsedRating} stelle.`
     );
 
     return res.status(201).json({
