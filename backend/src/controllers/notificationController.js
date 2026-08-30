@@ -85,7 +85,48 @@ async function markAllNotificationsAsRead(req, res, next) {
   }
 }
 
+async function deleteNotification(req, res, next) {
+  try {
+    const result = await pool.query(
+      `delete from notifications
+       where id = $1
+         and user_id = $2
+       returning id`,
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Notifica non trovata"
+      });
+    }
+
+    return res.sendStatus(204);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function deleteAllNotifications(req, res, next) {
+  try {
+    const result = await pool.query(
+      `delete from notifications
+       where user_id = $1
+       returning id`,
+      [req.user.id]
+    );
+
+    return res.json({
+      deletedCount: result.rows.length
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
+  deleteAllNotifications,
+  deleteNotification,
   listNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead
