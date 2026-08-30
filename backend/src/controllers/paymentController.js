@@ -13,6 +13,18 @@ function getInitialPaymentStatus(method) {
   return "paid";
 }
 
+async function createNotification(userId, bookingId, type, title, body) {
+  try {
+    await pool.query(
+      `insert into notifications (user_id, booking_id, type, title, body)
+       values ($1, $2, $3, $4, $5)`,
+      [userId, bookingId, type, title, body]
+    );
+  } catch (err) {
+    console.error("Errore creazione notifica", err);
+  }
+}
+
 async function createPayment(req, res, next) {
   try {
     const { method } = req.body;
@@ -25,10 +37,11 @@ async function createPayment(req, res, next) {
     }
 
     const bookingResult = await pool.query(
-      `select id, total_price, status
-       from bookings
-       where id = $1
-         and owner_id = $2`,
+      `select b.id, b.total_price, b.status, sp.user_id as sitter_user_id
+       from bookings b
+       join sitter_profiles sp on sp.id = b.sitter_id
+       where b.id = $1
+         and b.owner_id = $2`,
       [req.params.bookingId, req.user.id]
     );
 
@@ -59,6 +72,18 @@ async function createPayment(req, res, next) {
       ]
     );
 
+    const notificationText = paymentMethod === "bank_transfer"
+      ? "Il proprietario ha indicato un bonifico. Confermalo quando risulta ricevuto."
+      : "Il proprietario ha completato il pagamento demo della prenotazione.";
+
+    await createNotification(
+      booking.sitter_user_id,
+      booking.id,
+      "payment_received",
+      paymentMethod === "bank_transfer" ? "Bonifico da confermare" : "Pagamento ricevuto",
+      notificationText
+    );
+
     return res.status(201).json({
       payment: result.rows[0]
     });
@@ -85,7 +110,7 @@ async function confirmBankTransfer(req, res, next) {
          and sp.user_id = $2
          and pay.method = 'bank_transfer'
          and pay.status = 'authorized'
-       returning pay.id, pay.booking_id, pay.amount, pay.method, pay.status, pay.provider_reference, pay.created_at`,
+       returning pay.id, pay.booking_id, b.owner_id, pay.amount, pay.method, pay.status, pay.provider_reference, pay.created_at`,
       [req.params.id, req.user.id]
     );
 
@@ -94,6 +119,14 @@ async function confirmBankTransfer(req, res, next) {
         error: "Bonifico da confermare non trovato"
       });
     }
+
+    await createNotification(
+      result.rows[0].owner_id,
+      result.rows[0].booking_id,
+      "payment_received",
+      "Bonifico confermato",
+      "Il sitter ha confermato la ricezione del bonifico."
+    );
 
     return res.json({
       payment: result.rows[0]
