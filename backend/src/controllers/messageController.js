@@ -2,7 +2,7 @@ const pool = require("../db/pool");
 
 async function findAccessibleBooking(bookingId, user) {
   const result = await pool.query(
-    `select b.id
+    `select b.id, b.owner_id, sp.user_id as sitter_user_id
      from bookings b
      left join sitter_profiles sp on sp.id = b.sitter_id
      where b.id = $1
@@ -14,6 +14,14 @@ async function findAccessibleBooking(bookingId, user) {
   );
 
   return result.rows[0];
+}
+
+async function createNotification(userId, bookingId, title, body) {
+  await pool.query(
+    `insert into notifications (user_id, booking_id, type, title, body)
+     values ($1, $2, 'message_received', $3, $4)`,
+    [userId, bookingId, title, body]
+  );
 }
 
 async function listMessages(req, res, next) {
@@ -73,6 +81,17 @@ async function createMessage(req, res, next) {
        values ($1, $2, $3)
        returning id, booking_id, sender_id, body, sent_at`,
       [req.params.bookingId, req.user.id, body.trim()]
+    );
+
+    const receiverId = Number(req.user.id) === Number(booking.owner_id)
+      ? booking.sitter_user_id
+      : booking.owner_id;
+
+    await createNotification(
+      receiverId,
+      booking.id,
+      "Nuovo messaggio",
+      "Hai ricevuto un nuovo messaggio su una prenotazione."
     );
 
     return res.status(201).json({
