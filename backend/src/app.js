@@ -30,6 +30,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/bookings/:bookingId/messages", messageRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/pets", petRoutes);
 app.use("/api", paymentRoutes);

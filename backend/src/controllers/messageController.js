@@ -34,11 +34,21 @@ async function listMessages(req, res, next) {
       });
     }
 
+    await pool.query(
+      `update messages
+       set read_at = now()
+       where booking_id = $1
+         and sender_id <> $2
+         and read_at is null`,
+      [req.params.bookingId, req.user.id]
+    );
+
     const result = await pool.query(
       `select
          m.id,
          m.body,
          m.sent_at,
+         m.read_at,
          u.id as sender_id,
          u.first_name as sender_first_name,
          u.last_name as sender_last_name,
@@ -52,6 +62,30 @@ async function listMessages(req, res, next) {
 
     return res.json({
       messages: result.rows
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function countUnreadMessages(req, res, next) {
+  try {
+    const result = await pool.query(
+      `select count(*)::integer as unread_count
+       from messages m
+       join bookings b on b.id = m.booking_id
+       left join sitter_profiles sp on sp.id = b.sitter_id
+       where m.sender_id <> $1
+         and m.read_at is null
+         and (
+           b.owner_id = $1
+           or sp.user_id = $1
+         )`,
+      [req.user.id]
+    );
+
+    return res.json({
+      unreadCount: result.rows[0].unread_count
     });
   } catch (err) {
     return next(err);
@@ -103,6 +137,7 @@ async function createMessage(req, res, next) {
 }
 
 module.exports = {
+  countUnreadMessages,
   createMessage,
   listMessages
 };
