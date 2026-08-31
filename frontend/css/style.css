@@ -333,3 +333,24 @@ main {
         max-width: 100%;
     }
 }
+.nav-badge,
+.message-badge {
+    position: absolute;
+    top: -0.45rem;
+    right: -0.55rem;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: #dc3545;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.35rem;
+    text-align: center;
+}
+
+.message-button-wrapper {
+    position: relative;
+    display: inline-block;
+}
