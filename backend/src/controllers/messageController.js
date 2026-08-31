@@ -2,7 +2,7 @@ const pool = require("../db/pool");
 
 async function findAccessibleBooking(bookingId, user) {
   const result = await pool.query(
-    `select b.id
+    `select b.id, b.owner_id, sp.user_id as sitter_user_id
      from bookings b
      left join sitter_profiles sp on sp.id = b.sitter_id
      where b.id = $1
@@ -16,6 +16,14 @@ async function findAccessibleBooking(bookingId, user) {
   return result.rows[0];
 }
 
+async function createNotification(userId, bookingId, title, body) {
+  await pool.query(
+    `insert into notifications (user_id, booking_id, type, title, body)
+     values ($1, $2, 'message_received', $3, $4)`,
+    [userId, bookingId, title, body]
+  );
+}
+
 async function listMessages(req, res, next) {
   try {
     const booking = await findAccessibleBooking(req.params.bookingId, req.user);
@@ -26,11 +34,21 @@ async function listMessages(req, res, next) {
       });
     }
 
+    await pool.query(
+      `update messages
+       set read_at = now()
+       where booking_id = $1
+         and sender_id <> $2
+         and read_at is null`,
+      [req.params.bookingId, req.user.id]
+    );
+
     const result = await pool.query(
       `select
          m.id,
          m.body,
          m.sent_at,
+         m.read_at,
          u.id as sender_id,
          u.first_name as sender_first_name,
          u.last_name as sender_last_name,
@@ -44,6 +62,30 @@ async function listMessages(req, res, next) {
 
     return res.json({
       messages: result.rows
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function countUnreadMessages(req, res, next) {
+  try {
+    const result = await pool.query(
+      `select count(*)::integer as unread_count
+       from messages m
+       join bookings b on b.id = m.booking_id
+       left join sitter_profiles sp on sp.id = b.sitter_id
+       where m.sender_id <> $1
+         and m.read_at is null
+         and (
+           b.owner_id = $1
+           or sp.user_id = $1
+         )`,
+      [req.user.id]
+    );
+
+    return res.json({
+      unreadCount: result.rows[0].unread_count
     });
   } catch (err) {
     return next(err);
@@ -75,6 +117,17 @@ async function createMessage(req, res, next) {
       [req.params.bookingId, req.user.id, body.trim()]
     );
 
+    const receiverId = Number(req.user.id) === Number(booking.owner_id)
+      ? booking.sitter_user_id
+      : booking.owner_id;
+
+    await createNotification(
+      receiverId,
+      booking.id,
+      "Nuovo messaggio",
+      "Hai ricevuto un nuovo messaggio su una prenotazione."
+    );
+
     return res.status(201).json({
       message: result.rows[0]
     });
@@ -84,6 +137,7 @@ async function createMessage(req, res, next) {
 }
 
 module.exports = {
+  countUnreadMessages,
   createMessage,
   listMessages
 };

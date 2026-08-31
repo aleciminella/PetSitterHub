@@ -132,6 +132,18 @@ function getBookingOrder(period) {
   return "b.starts_at desc";
 }
 
+async function createNotification(userId, bookingId, type, title, body) {
+  try {
+    await pool.query(
+      `insert into notifications (user_id, booking_id, type, title, body)
+       values ($1, $2, $3, $4, $5)`,
+      [userId, bookingId, type, title, body]
+    );
+  } catch (err) {
+    console.error("Errore creazione notifica", err);
+  }
+}
+
 async function listBookings(req, res, next) {
   try {
     let result;
@@ -291,6 +303,14 @@ async function createBooking(req, res, next) {
       ]
     );
 
+    await createNotification(
+      await findSitterUserId(sitterId),
+      bookingResult.rows[0].id,
+      "booking_created",
+      "Nuova richiesta di prenotazione",
+      "Hai ricevuto una nuova richiesta di prenotazione."
+    );
+
     return res.status(201).json({
       booking: bookingResult.rows[0]
     });
@@ -301,7 +321,7 @@ async function createBooking(req, res, next) {
 
 async function findBookingForSitter(bookingId, sitterUserId) {
   const result = await pool.query(
-    `select b.id, b.sitter_id, b.starts_at, b.ends_at, b.status
+    `select b.id, b.owner_id, b.sitter_id, b.starts_at, b.ends_at, b.status
      from bookings b
      join sitter_profiles sp on sp.id = b.sitter_id
      where b.id = $1
@@ -310,6 +330,17 @@ async function findBookingForSitter(bookingId, sitterUserId) {
   );
 
   return result.rows[0];
+}
+
+async function findSitterUserId(sitterId) {
+  const result = await pool.query(
+    `select user_id
+     from sitter_profiles
+     where id = $1`,
+    [sitterId]
+  );
+
+  return result.rows[0] && result.rows[0].user_id;
 }
 
 async function hasAcceptedBookingOverlap(booking) {
@@ -330,10 +361,11 @@ async function hasAcceptedBookingOverlap(booking) {
 
 async function findBookingForOwner(bookingId, ownerId) {
   const result = await pool.query(
-    `select id, status
-     from bookings
-     where id = $1
-       and owner_id = $2`,
+    `select b.id, b.status, sp.user_id as sitter_user_id
+     from bookings b
+     join sitter_profiles sp on sp.id = b.sitter_id
+     where b.id = $1
+       and b.owner_id = $2`,
     [bookingId, ownerId]
   );
 
@@ -380,6 +412,14 @@ async function acceptBooking(req, res, next) {
       [req.params.id]
     );
 
+    await createNotification(
+      booking.owner_id,
+      booking.id,
+      "booking_accepted",
+      "Richiesta accettata",
+      "Il sitter ha accettato la tua richiesta. Ora puoi procedere con il pagamento."
+    );
+
     return res.json({
       booking: result.rows[0]
     });
@@ -412,6 +452,14 @@ async function rejectBooking(req, res, next) {
       [req.params.id]
     );
 
+    await createNotification(
+      booking.owner_id,
+      booking.id,
+      "booking_rejected",
+      "Richiesta rifiutata",
+      "Il sitter ha rifiutato la tua richiesta di prenotazione."
+    );
+
     return res.json({
       booking: result.rows[0]
     });
@@ -442,6 +490,14 @@ async function cancelBooking(req, res, next) {
        where id = $1
        returning id, status, updated_at`,
       [req.params.id]
+    );
+
+    await createNotification(
+      booking.sitter_user_id,
+      booking.id,
+      "booking_cancelled",
+      "Prenotazione annullata",
+      "Il proprietario ha annullato una prenotazione."
     );
 
     return res.json({
@@ -490,6 +546,14 @@ async function cancelBookingBySitter(req, res, next) {
     );
 
     await client.query("commit");
+
+    await createNotification(
+      booking.owner_id,
+      booking.id,
+      "booking_cancelled",
+      "Prenotazione annullata",
+      "Il sitter ha annullato la prenotazione. Se avevi già pagato, riceverai un rimborso demo."
+    );
 
     return res.json({
       booking: bookingResult.rows[0],
