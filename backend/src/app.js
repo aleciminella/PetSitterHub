@@ -1,4 +1,5 @@
 const express = require("express");
+const adminRoutes = require("./routes/adminRoutes");
 const authRoutes = require("./routes/authRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const healthRoutes = require("./routes/healthRoutes");
@@ -26,6 +27,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/bookings/:bookingId/messages", messageRoutes);
