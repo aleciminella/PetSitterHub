@@ -93,6 +93,78 @@ async function listUsers(req, res, next) {
   }
 }
 
+async function listBookings(req, res, next) {
+  try {
+    const pagination = getPagination(req.query);
+    const result = await pool.query(
+      `select
+         b.id,
+         b.starts_at,
+         b.ends_at,
+         b.status,
+         b.total_price,
+         b.created_at,
+         owner.first_name as owner_first_name,
+         owner.last_name as owner_last_name,
+         sitter_user.first_name as sitter_first_name,
+         sitter_user.last_name as sitter_last_name,
+         p.name as pet_name,
+         p.species as pet_type,
+         s.name as service_name
+       from bookings b
+       join users owner on owner.id = b.owner_id
+       join sitter_profiles sp on sp.id = b.sitter_id
+       join users sitter_user on sitter_user.id = sp.user_id
+       join pets p on p.id = b.pet_id
+       join services s on s.id = b.service_id
+       order by b.created_at desc
+       limit $1
+       offset $2`,
+      [pagination.limit, pagination.offset]
+    );
+
+    return res.json({
+      bookings: result.rows
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function listReviews(req, res, next) {
+  try {
+    const pagination = getPagination(req.query);
+    const result = await pool.query(
+      `select
+         r.id,
+         r.rating,
+         r.comment,
+         r.created_at,
+         owner.first_name as owner_first_name,
+         owner.last_name as owner_last_name,
+         sitter_user.first_name as sitter_first_name,
+         sitter_user.last_name as sitter_last_name,
+         s.name as service_name
+       from reviews r
+       join users owner on owner.id = r.owner_id
+       join sitter_profiles sp on sp.id = r.sitter_id
+       join users sitter_user on sitter_user.id = sp.user_id
+       join bookings b on b.id = r.booking_id
+       join services s on s.id = b.service_id
+       order by r.created_at desc
+       limit $1
+       offset $2`,
+      [pagination.limit, pagination.offset]
+    );
+
+    return res.json({
+      reviews: result.rows
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function deleteUser(req, res, next) {
   try {
     if (Number(req.params.id) === Number(req.user.id)) {
@@ -147,6 +219,8 @@ async function promoteUserToAdmin(req, res, next) {
 module.exports = {
   deleteUser,
   getOverview,
+  listBookings,
+  listReviews,
   listUsers,
   promoteUserToAdmin
 };
