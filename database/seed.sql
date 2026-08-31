@@ -41,6 +41,7 @@ join (
 on conflict (service_id, pet_type) do nothing;
 
 insert into users (email, password_hash, first_name, last_name, role, phone, city) values
+  ('admin@petsitterhub.it', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Admin', 'PetSitterHub', 'admin', null, null),
   ('mario.owner@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Mario', 'Rossi', 'owner', '3331234567', 'Roma'),
   ('giulia.sitter@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Giulia', 'Bianchi', 'sitter', '3331112222', 'Roma'),
   ('luca.sitter@example.com', '$2b$10$QXOEWxkfdWlYokay5yfmDuF9USNe2MH0dztAudU8pMWlmfcBp.1cu', 'Luca', 'Verdi', 'sitter', '3334445555', 'Milano')
