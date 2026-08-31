@@ -6,10 +6,42 @@ function getSavedUser() {
     return JSON.parse(savedUser);
 }
 
+function getSavedToken() {
+    return localStorage.getItem("petsitterhubToken");
+}
+
 function logout() {
     localStorage.removeItem("petsitterhubUser");
     localStorage.removeItem("petsitterhubToken");
     window.location.href = "/index.html";
+}
+
+function renderNavBadge(count) {
+    return count > 0 ? `<span class="nav-badge">${count}</span>` : "";
+}
+
+function loadNavbarBadge(user) {
+    const token = getSavedToken();
+    if (!user || !token) {
+        return;
+    }
+    $.when(
+        $.ajax({
+            url: "http://localhost:4000/api/notifications",
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` }
+        }),
+        $.ajax({
+            url: "http://localhost:4000/api/messages/unread-count",
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` }
+        })
+    ).done(function (notificationsResponse, messagesResponse) {
+        const unreadNotifications = notificationsResponse[0].unreadCount || 0;
+        const unreadMessages = messagesResponse[0].unreadCount || 0;
+        const total = unreadNotifications + unreadMessages;
+        $(".dashboard-link").append(renderNavBadge(total));
+    });
 }
 
 function updateNavbar() {
@@ -29,8 +61,8 @@ function updateNavbar() {
     $("#mainNavbarLinks").html(`
         ${onHome ? "" : `<li class="nav-item"><a class="nav-link" href="${prefix}index.html#search">Cerca sitter</a></li>`}
         ${onServices ? "" : `<li class="nav-item"><a class="nav-link" href="${prefix}pages/services.html">Servizi</a></li>`}
-        ${user && user.role === "owner" && !onOwnerDashboard ? `<li class="nav-item"><a class="nav-link" href="${prefix}pages/owner-dashboard.html">Dashboard</a></li>` : ""}
-        ${user && user.role === "sitter" && !onSitterDashboard ? `<li class="nav-item"><a class="nav-link" href="${prefix}pages/sitter-dashboard.html">Area sitter</a></li>` : ""}
+        ${user && user.role === "owner" && !onOwnerDashboard ? `<li class="nav-item"><a class="nav-link dashboard-link position-relative" href="${prefix}pages/owner-dashboard.html">Dashboard</a></li>` : ""}
+        ${user && user.role === "sitter" && !onSitterDashboard ? `<li class="nav-item"><a class="nav-link dashboard-link position-relative" href="${prefix}pages/sitter-dashboard.html">Area sitter</a></li>` : ""}
     `);
 
     if (!user) {
@@ -46,6 +78,7 @@ function updateNavbar() {
     `);
 
     $("#logoutButton").on("click", logout);
+    loadNavbarBadge(user);
 }
 
 $(document).ready(function () {

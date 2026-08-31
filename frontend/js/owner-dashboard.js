@@ -3,6 +3,9 @@ let petsCache = [];
 let bookingsOffset = 0;
 let bookingsHasMore = false;
 const BOOKINGS_LIMIT = 5;
+let notificationsOffset = 0; 
+let notificationsHasMore = false; 
+const NOTIFICATIONS_LIMIT = 3; 
 
 function getSavedUser() {
     const savedUser = localStorage.getItem("petsitterhubUser");
@@ -328,6 +331,92 @@ function sendMessage(bookingId, input) {
     });
 }
 
+function renderNotifications(notifications, append) {
+    if (!append) {
+        $("#ownerNotificationsList").html("");
+    }
+    if (!notifications.length && !append) {
+        $("#ownerNotificationsList").html('<div class="empty-state">Nessuna notifica.</div>');
+        $("#loadMoreNotificationsButton").addClass("d-none");
+        return;
+    }
+    const html = notifications.map(function (notification) {
+        return `
+            <article class="booking-message-item ${notification.is_read ? "" : "border border-primary"}">
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <strong>${notification.title}</strong>
+                        <p class="mb-1">${notification.body}</p>
+                        <small class="text-muted">${formatDateTime(notification.created_at)}</small>
+                    </div>
+                    <div class="d-flex gap-2 align-items-start">
+                        ${notification.is_read ? "" : `<button class="btn btn-outline-primary btn-sm read-notification-button" type="button" data-id="${notification.id}">Letta</button>`}
+                        <button class="btn btn-outline-danger btn-sm delete-notification-button" type="button" data-id="${notification.id}">Elimina</button>
+                    </div>
+                </div>
+            </article>
+        `;
+    }).join("");
+    $("#ownerNotificationsList").append(html);
+    $("#loadMoreNotificationsButton").toggleClass("d-none", !notificationsHasMore);
+}
+
+function loadNotifications(append = false) {
+    if (!append) {
+        notificationsOffset = 0;
+    }
+    $.ajax({
+        url: `${API_BASE_URL}/notifications?limit=${NOTIFICATIONS_LIMIT}&offset=${notificationsOffset}`,
+        method: "GET",
+        headers: authHeaders(),
+        success: function (response) {
+            const notifications = response.notifications || [];
+            notificationsHasMore = notifications.length === NOTIFICATIONS_LIMIT;
+            notificationsOffset += notifications.length;
+            $("#ownerNotificationsBadge")
+                .toggleClass("d-none", !response.unreadCount)
+                .text(response.unreadCount || "");
+            renderNotifications(notifications, append);
+        },
+        error: function () {
+            $("#ownerNotificationsList").html('<div class="empty-state text-danger">Errore durante il caricamento delle notifiche.</div>');
+        }
+    });
+}
+
+function markNotificationAsRead(notificationId) {
+    $.ajax({
+        url: `${API_BASE_URL}/notifications/${notificationId}/read`,
+        method: "PATCH",
+        headers: authHeaders(),
+        success: function () {
+            loadNotifications();
+        }
+    });
+}
+
+function markAllNotificationsAsRead() {
+    $.ajax({
+        url: `${API_BASE_URL}/notifications/read-all`,
+        method: "PATCH",
+        headers: authHeaders(),
+        success: function () {
+            loadNotifications();
+        }
+    });
+}
+
+function deleteNotification(notificationId) {
+    $.ajax({
+        url: `${API_BASE_URL}/notifications/${notificationId}`,
+        method: "DELETE",
+        headers: authHeaders(),
+        success: function () {
+            loadNotifications();
+        }
+    });
+}
+
 $(document).ready(function () {
     if (!guardOwnerDashboard()) {
         return;
@@ -335,6 +424,7 @@ $(document).ready(function () {
 
     loadPets();
     loadBookings();
+    loadNotifications(); 
     $("#refreshPetsButton").on("click", loadPets);
     $("#bookingPeriod").on("change", function () {
         loadBookings();
@@ -357,7 +447,7 @@ $(document).ready(function () {
     $("#bookingsList").on("click", ".cancel-booking-button", function () {
         cancelBooking($(this).data("id"));
     });
-    
+
     $("#bookingsList").on("click", ".toggle-messages-button", function () {
         const bookingId = $(this).data("id");
         const box = $(`#messages-${bookingId}`);
@@ -371,5 +461,18 @@ $(document).ready(function () {
         const bookingId = $(this).data("id");
         const input = $(`#messages-${bookingId}`).find(".message-input");
         sendMessage(bookingId, input);
+    });
+    $("#loadMoreNotificationsButton").on("click", function () {
+        loadNotifications(true);
+    });
+    
+    $("#markAllNotificationsReadButton").on("click", markAllNotificationsAsRead);
+    
+    $("#ownerNotificationsList").on("click", ".read-notification-button", function () {
+        markNotificationAsRead($(this).data("id"));
+    });
+    
+    $("#ownerNotificationsList").on("click", ".delete-notification-button", function () {
+        deleteNotification($(this).data("id"));
     });
 });
