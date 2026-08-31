@@ -93,7 +93,35 @@ async function listUsers(req, res, next) {
   }
 }
 
+async function deleteUser(req, res, next) {
+  try {
+    if (Number(req.params.id) === Number(req.user.id)) {
+      return res.status(400).json({
+        error: "Non puoi eliminare il tuo account admin"
+      });
+    }
+
+    const result = await pool.query(
+      `delete from users
+       where id = $1
+       returning id`,
+      [req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Utente non trovato"
+      });
+    }
+
+    return res.sendStatus(204);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
+  deleteUser,
   getOverview,
   listUsers
 };
