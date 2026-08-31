@@ -120,8 +120,33 @@ async function deleteUser(req, res, next) {
   }
 }
 
+async function promoteUserToAdmin(req, res, next) {
+  try {
+    const result = await pool.query(
+      `update users
+       set role = 'admin'
+       where id = $1
+       returning id, email, first_name, last_name, role, phone, city, created_at`,
+      [req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Utente non trovato"
+      });
+    }
+
+    return res.json({
+      user: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   deleteUser,
   getOverview,
-  listUsers
+  listUsers,
+  promoteUserToAdmin
 };
