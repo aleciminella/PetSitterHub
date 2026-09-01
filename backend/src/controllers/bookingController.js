@@ -161,7 +161,10 @@ async function listBookings(req, res, next) {
            b.id,
            b.starts_at,
            b.ends_at,
-           b.status,
+           case
+             when b.status = 'accepted' and b.ends_at < now() then 'completed'
+             else b.status
+           end as status,
            b.total_price,
            b.notes,
            b.created_at,
@@ -200,7 +203,10 @@ async function listBookings(req, res, next) {
            b.id,
            b.starts_at,
            b.ends_at,
-           b.status,
+           case
+             when b.status = 'accepted' and b.ends_at < now() then 'completed'
+             else b.status
+           end as status,
            b.total_price,
            b.notes,
            b.created_at,

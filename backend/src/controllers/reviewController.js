@@ -50,7 +50,10 @@ async function createReview(req, res, next) {
        join sitter_profiles sp on sp.id = b.sitter_id
        where b.id = $1
          and owner_id = $2
-         and b.status = 'completed'`,
+         and (
+           b.status = 'completed'
+           or (b.status = 'accepted' and b.ends_at < now())
+         )`,
       [req.params.bookingId, req.user.id]
     );
 
