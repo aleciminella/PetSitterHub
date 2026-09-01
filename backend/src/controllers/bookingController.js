@@ -1,4 +1,5 @@
 const pool = require("../db/pool");
+const { createNotification } = require("../services/notificationService");
 
 function calculateTotalPrice(price, priceUnit, startsAt, endsAt) {
   const start = new Date(startsAt);
@@ -132,13 +133,9 @@ function getBookingOrder(period) {
   return "b.starts_at desc";
 }
 
-async function createNotification(userId, bookingId, type, title, body) {
+async function createBookingNotification(notification) {
   try {
-    await pool.query(
-      `insert into notifications (user_id, booking_id, type, title, body)
-       values ($1, $2, $3, $4, $5)`,
-      [userId, bookingId, type, title, body]
-    );
+    await createNotification(notification);
   } catch (err) {
     console.error("Errore creazione notifica", err);
   }
@@ -309,13 +306,13 @@ async function createBooking(req, res, next) {
       ]
     );
 
-    await createNotification(
-      await findSitterUserId(sitterId),
-      bookingResult.rows[0].id,
-      "booking_created",
-      "Nuova richiesta di prenotazione",
-      "Hai ricevuto una nuova richiesta di prenotazione."
-    );
+    await createBookingNotification({
+      userId: await findSitterUserId(sitterId),
+      bookingId: bookingResult.rows[0].id,
+      type: "booking_created",
+      title: "Nuova richiesta di prenotazione",
+      body: "Hai ricevuto una nuova richiesta di prenotazione."
+    });
 
     return res.status(201).json({
       booking: bookingResult.rows[0]
@@ -418,13 +415,13 @@ async function acceptBooking(req, res, next) {
       [req.params.id]
     );
 
-    await createNotification(
-      booking.owner_id,
-      booking.id,
-      "payment_required",
-      "Richiesta accettata",
-      "Il sitter ha accettato la tua richiesta. Ora puoi procedere con il pagamento."
-    );
+    await createBookingNotification({
+      userId: booking.owner_id,
+      bookingId: booking.id,
+      type: "payment_required",
+      title: "Richiesta accettata",
+      body: "Il sitter ha accettato la tua richiesta. Ora puoi procedere con il pagamento."
+    });
 
     return res.json({
       booking: result.rows[0]
@@ -458,13 +455,13 @@ async function rejectBooking(req, res, next) {
       [req.params.id]
     );
 
-    await createNotification(
-      booking.owner_id,
-      booking.id,
-      "booking_rejected",
-      "Richiesta rifiutata",
-      "Il sitter ha rifiutato la tua richiesta di prenotazione."
-    );
+    await createBookingNotification({
+      userId: booking.owner_id,
+      bookingId: booking.id,
+      type: "booking_rejected",
+      title: "Richiesta rifiutata",
+      body: "Il sitter ha rifiutato la tua richiesta di prenotazione."
+    });
 
     return res.json({
       booking: result.rows[0]
@@ -498,13 +495,13 @@ async function cancelBooking(req, res, next) {
       [req.params.id]
     );
 
-    await createNotification(
-      booking.sitter_user_id,
-      booking.id,
-      "booking_cancelled",
-      "Prenotazione annullata",
-      "Il proprietario ha annullato una prenotazione."
-    );
+    await createBookingNotification({
+      userId: booking.sitter_user_id,
+      bookingId: booking.id,
+      type: "booking_cancelled",
+      title: "Prenotazione annullata",
+      body: "Il proprietario ha annullato una prenotazione."
+    });
 
     return res.json({
       booking: result.rows[0]
@@ -553,22 +550,22 @@ async function cancelBookingBySitter(req, res, next) {
 
     await client.query("commit");
 
-    await createNotification(
-      booking.owner_id,
-      booking.id,
-      "booking_cancelled",
-      "Prenotazione annullata",
-      "Il sitter ha annullato la prenotazione. Se avevi già pagato, riceverai un rimborso demo."
-    );
+    await createBookingNotification({
+      userId: booking.owner_id,
+      bookingId: booking.id,
+      type: "booking_cancelled",
+      title: "Prenotazione annullata",
+      body: "Il sitter ha annullato la prenotazione. Se avevi già pagato, riceverai un rimborso demo."
+    });
 
     if (paymentResult.rows.length > 0) {
-      await createNotification(
-        booking.owner_id,
-        booking.id,
-        "payment_refunded",
-        "Rimborso avviato",
-        "Il rimborso demo verrà accreditato sul metodo di pagamento usato per la prenotazione."
-      );
+      await createBookingNotification({
+        userId: booking.owner_id,
+        bookingId: booking.id,
+        type: "payment_refunded",
+        title: "Rimborso avviato",
+        body: "Il rimborso demo verrà accreditato sul metodo di pagamento usato per la prenotazione."
+      });
     }
 
     return res.json({
