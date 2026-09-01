@@ -467,6 +467,36 @@ function getPaymentStatusLabel(booking) {
     return booking.payment_status;
 }
 
+function updateBookingStatus(bookingId, action) {
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/${action}`,
+        method: "PATCH",
+        headers: authHeaders(),
+        success: function () {
+            loadSitterBookings();
+            loadNotifications();
+        },
+        error: function () {
+            showMessage("#sitterBookingsMessage", "danger", "Errore durante l'aggiornamento della prenotazione.");
+        }
+    });
+}
+
+function confirmBankTransfer(paymentId) {
+    $.ajax({
+        url: `${API_BASE_URL}/payments/${paymentId}/confirm-bank-transfer`,
+        method: "PATCH",
+        headers: authHeaders(),
+        success: function () {
+            loadSitterBookings();
+            loadNotifications();
+        },
+        error: function () {
+            showMessage("#sitterBookingsMessage", "danger", "Errore durante la conferma del bonifico.");
+        }
+    });
+}
+
 function renderSitterBookings(bookings, append) {
     if (!append) {
         $("#sitterBookingsList").html("");
@@ -691,5 +721,20 @@ $("#sitterBookingPeriod").on("change", function () {
 
 $("#loadMoreSitterBookingsButton").on("click", function () {
     loadSitterBookings(true);
+});
+$("#sitterBookingsList").on("click", ".accept-booking-button", function () {
+    updateBookingStatus($(this).data("id"), "accept");
+});
+
+$("#sitterBookingsList").on("click", ".reject-booking-button", function () {
+    updateBookingStatus($(this).data("id"), "reject");
+});
+
+$("#sitterBookingsList").on("click", ".cancel-sitter-booking-button", function () {
+    updateBookingStatus($(this).data("id"), "cancel-by-sitter");
+});
+
+$("#sitterBookingsList").on("click", ".confirm-bank-transfer-button", function () {
+    confirmBankTransfer($(this).data("payment-id"));
 });
 });
