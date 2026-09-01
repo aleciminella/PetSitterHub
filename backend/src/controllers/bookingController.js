@@ -161,7 +161,10 @@ async function listBookings(req, res, next) {
            b.id,
            b.starts_at,
            b.ends_at,
-           b.status,
+           case
+             when b.status = 'accepted' and b.ends_at < now() then 'completed'
+             else b.status
+           end as status,
            b.total_price,
            b.notes,
            b.created_at,
@@ -200,7 +203,10 @@ async function listBookings(req, res, next) {
            b.id,
            b.starts_at,
            b.ends_at,
-           b.status,
+           case
+             when b.status = 'accepted' and b.ends_at < now() then 'completed'
+             else b.status
+           end as status,
            b.total_price,
            b.notes,
            b.created_at,
@@ -415,7 +421,7 @@ async function acceptBooking(req, res, next) {
     await createNotification(
       booking.owner_id,
       booking.id,
-      "booking_accepted",
+      "payment_required",
       "Richiesta accettata",
       "Il sitter ha accettato la tua richiesta. Ora puoi procedere con il pagamento."
     );
@@ -554,6 +560,16 @@ async function cancelBookingBySitter(req, res, next) {
       "Prenotazione annullata",
       "Il sitter ha annullato la prenotazione. Se avevi già pagato, riceverai un rimborso demo."
     );
+
+    if (paymentResult.rows.length > 0) {
+      await createNotification(
+        booking.owner_id,
+        booking.id,
+        "payment_refunded",
+        "Rimborso avviato",
+        "Il rimborso demo verrà accreditato sul metodo di pagamento usato per la prenotazione."
+      );
+    }
 
     return res.json({
       booking: bookingResult.rows[0],
