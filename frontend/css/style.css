@@ -354,3 +354,9 @@ main {
     position: relative;
     display: inline-block;
 }
+#sitterBookingsList .booking-card { 
+    scroll-margin-top: 90px; 
+}
+#sitterBookingsMessage {     
+    margin-bottom: 1rem; 
+} 
