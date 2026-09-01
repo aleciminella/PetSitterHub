@@ -1,4 +1,5 @@
 const pool = require("../db/pool");
+const { createNotification } = require("../services/notificationService");
 
 function createProviderReference(method, bookingId) {
   const prefix = method === "bank_transfer" ? "BONIFICO" : "DEMO";
@@ -13,13 +14,9 @@ function getInitialPaymentStatus(method) {
   return "paid";
 }
 
-async function createNotification(userId, bookingId, type, title, body) {
+async function createPaymentNotification(notification) {
   try {
-    await pool.query(
-      `insert into notifications (user_id, booking_id, type, title, body)
-       values ($1, $2, $3, $4, $5)`,
-      [userId, bookingId, type, title, body]
-    );
+    await createNotification(notification);
   } catch (err) {
     console.error("Errore creazione notifica", err);
   }
@@ -76,13 +73,13 @@ async function createPayment(req, res, next) {
       ? "Il proprietario ha indicato un bonifico. Confermalo quando risulta ricevuto."
       : "Il proprietario ha completato il pagamento demo della prenotazione.";
 
-    await createNotification(
-      booking.sitter_user_id,
-      booking.id,
-      "payment_received",
-      paymentMethod === "bank_transfer" ? "Bonifico da confermare" : "Pagamento ricevuto",
-      notificationText
-    );
+    await createPaymentNotification({
+      userId: booking.sitter_user_id,
+      bookingId: booking.id,
+      type: "payment_received",
+      title: paymentMethod === "bank_transfer" ? "Bonifico da confermare" : "Pagamento ricevuto",
+      body: notificationText
+    });
 
     return res.status(201).json({
       payment: result.rows[0]
@@ -120,13 +117,13 @@ async function confirmBankTransfer(req, res, next) {
       });
     }
 
-    await createNotification(
-      result.rows[0].owner_id,
-      result.rows[0].booking_id,
-      "payment_received",
-      "Bonifico confermato",
-      "Il sitter ha confermato la ricezione del bonifico."
-    );
+    await createPaymentNotification({
+      userId: result.rows[0].owner_id,
+      bookingId: result.rows[0].booking_id,
+      type: "payment_received",
+      title: "Bonifico confermato",
+      body: "Il sitter ha confermato la ricezione del bonifico."
+    });
 
     return res.json({
       payment: result.rows[0]
