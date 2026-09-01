@@ -467,6 +467,60 @@ function getPaymentStatusLabel(booking) {
     return booking.payment_status;
 }
 
+function renderSitterMessages(container, messages) {
+    if (!messages.length) {
+        container.html('<div class="text-muted">Nessun messaggio.</div>');
+        return;
+    }
+    container.html(messages.map(function (message) {
+        return `
+            <div class="booking-message-item">
+                <strong>${message.sender_first_name} ${message.sender_last_name}</strong>
+                <p class="mb-0">${message.body}</p>
+            </div>
+        `;
+    }).join(""));
+}
+
+function loadSitterMessages(bookingId) {
+    const box = $(`#sitter-messages-${bookingId}`);
+    const list = box.find(".booking-messages-list");
+    list.html('<div class="text-muted">Caricamento messaggi...</div>');
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/messages`,
+        method: "GET",
+        headers: authHeaders(),
+        success: function (response) {
+            renderSitterMessages(list, response.messages || []);
+            loadNotifications();
+        },
+        error: function () {
+            list.html('<div class="text-danger">Errore durante il caricamento dei messaggi.</div>');
+        }
+    });
+}
+
+function sendSitterMessage(bookingId, input) {
+    const body = input.val().trim();
+    if (!body) {
+        return;
+    }
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/messages`,
+        method: "POST",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify({ body }),
+        success: function () {
+            input.val("");
+            loadSitterMessages(bookingId);
+        },
+        error: function () {
+            showMessage("#sitterBookingsMessage", "danger", "Errore durante l'invio del messaggio.");
+        }
+    });
+}
+
 function updateBookingStatus(bookingId, action) {
     $.ajax({
         url: `${API_BASE_URL}/bookings/${bookingId}/${action}`,
@@ -736,5 +790,19 @@ $("#sitterBookingsList").on("click", ".cancel-sitter-booking-button", function (
 
 $("#sitterBookingsList").on("click", ".confirm-bank-transfer-button", function () {
     confirmBankTransfer($(this).data("payment-id"));
+});
+$("#sitterBookingsList").on("click", ".toggle-sitter-messages-button", function () {
+    const bookingId = $(this).data("id");
+    const box = $(`#sitter-messages-${bookingId}`);
+    box.toggleClass("d-none");
+    if (!box.hasClass("d-none")) {
+        loadSitterMessages(bookingId);
+    }
+});
+
+$("#sitterBookingsList").on("click", ".send-sitter-message-button", function () {
+    const bookingId = $(this).data("id");
+    const input = $(`#sitter-messages-${bookingId}`).find(".message-input");
+    sendSitterMessage(bookingId, input);
 });
 });
