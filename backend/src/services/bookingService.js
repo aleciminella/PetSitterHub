@@ -1,4 +1,5 @@
 const pool = require("../db/pool");
+const SLOT_MINUTES = 60;
 
 function calculateTotalPrice(price, priceUnit, startsAt, endsAt) {
   const start = new Date(startsAt);
@@ -22,7 +23,17 @@ function hasInvalidDates(startsAt, endsAt) {
   const start = new Date(startsAt);
   const end = new Date(endsAt);
 
-  return Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
+  return Number.isNaN(start.getTime())
+    || Number.isNaN(end.getTime())
+    || end <= start
+    || !hasValidSlot(start)
+    || !hasValidSlot(end);
+}
+
+function hasValidSlot(date) {
+  return date.getSeconds() === 0
+    && date.getMilliseconds() === 0
+    && date.getMinutes() % SLOT_MINUTES === 0;
 }
 
 function toDateKey(date) {
