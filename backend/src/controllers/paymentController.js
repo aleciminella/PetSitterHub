@@ -86,8 +86,15 @@ async function createPayment(req, res, next) {
     });
   } catch (err) {
     if (err.code === "23505") {
-      return res.status(409).json({
-        error: "Pagamento già registrato per questa prenotazione"
+      const existingPayment = await pool.query(
+        `select id, booking_id, amount, method, status, provider_reference, created_at
+         from payments
+         where booking_id = $1`,
+        [req.params.bookingId]
+      );
+
+      return res.json({
+        payment: existingPayment.rows[0]
       });
     }
 
