@@ -1,4 +1,5 @@
 const pool = require("../db/pool");
+const { createNotification } = require("../services/notificationService");
 
 async function findAccessibleBooking(bookingId, user) {
   const result = await pool.query(
@@ -14,14 +15,6 @@ async function findAccessibleBooking(bookingId, user) {
   );
 
   return result.rows[0];
-}
-
-async function createNotification(userId, bookingId, title, body) {
-  await pool.query(
-    `insert into notifications (user_id, booking_id, type, title, body)
-     values ($1, $2, 'message_received', $3, $4)`,
-    [userId, bookingId, title, body]
-  );
 }
 
 async function listMessages(req, res, next) {
@@ -121,12 +114,13 @@ async function createMessage(req, res, next) {
       ? booking.sitter_user_id
       : booking.owner_id;
 
-    await createNotification(
-      receiverId,
-      booking.id,
-      "Nuovo messaggio",
-      "Hai ricevuto un nuovo messaggio su una prenotazione."
-    );
+    await createNotification({
+      userId: receiverId,
+      bookingId: booking.id,
+      type: "message_received",
+      title: "Nuovo messaggio",
+      body: "Hai ricevuto un nuovo messaggio su una prenotazione."
+    });
 
     return res.status(201).json({
       message: result.rows[0]

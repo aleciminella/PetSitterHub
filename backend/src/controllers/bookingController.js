@@ -1,108 +1,12 @@
 const pool = require("../db/pool");
-
-function calculateTotalPrice(price, priceUnit, startsAt, endsAt) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-  const durationMs = end.getTime() - start.getTime();
-
-  if (priceUnit === "hourly") {
-    const hours = Math.max(1, Math.ceil(durationMs / (1000 * 60 * 60)));
-    return price * hours;
-  }
-
-  if (priceUnit === "daily") {
-    const days = Math.max(1, Math.ceil(durationMs / (1000 * 60 * 60 * 24)));
-    return price * days;
-  }
-
-  return price;
-}
-
-function hasInvalidDates(startsAt, endsAt) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-
-  return Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
-}
-
-function toDateKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function toMinutes(value) {
-  const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
-
-  return hours * 60 + minutes;
-}
-
-function getAvailabilityForDate(dateKey, weekday, weeklyAvailability, exceptions) {
-  const exception = exceptions.find((item) => {
-    const startsOn = typeof item.starts_on === "string" ? item.starts_on : toDateKey(item.starts_on);
-    const endsOn = typeof item.ends_on === "string" ? item.ends_on : toDateKey(item.ends_on);
-
-    return startsOn <= dateKey && endsOn >= dateKey;
-  });
-
-  if (exception) {
-    return exception;
-  }
-
-  return weeklyAvailability.find((item) => item.weekday === weekday);
-}
-
-function eachBookingDate(startsAt, endsAt) {
-  const dates = [];
-  const current = new Date(startsAt.getFullYear(), startsAt.getMonth(), startsAt.getDate());
-  const last = new Date(endsAt.getFullYear(), endsAt.getMonth(), endsAt.getDate());
-
-  while (current <= last) {
-    dates.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-
-  return dates;
-}
-
-async function isSitterAvailable(sitterId, startsAt, endsAt) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-
-  const weeklyResult = await pool.query(
-    `select weekday, is_available, starts_at, ends_at
-     from sitter_weekly_availability
-     where sitter_id = $1`,
-    [sitterId]
-  );
-
-  const exceptionResult = await pool.query(
-    `select starts_on, ends_on, is_available, starts_at, ends_at
-     from sitter_availability_exceptions
-     where sitter_id = $1
-       and starts_on <= $3::date
-       and ends_on >= $2::date`,
-    [sitterId, toDateKey(start), toDateKey(end)]
-  );
-
-  return eachBookingDate(start, end).every((date) => {
-    const dateKey = toDateKey(date);
-    const availability = getAvailabilityForDate(dateKey, date.getDay(), weeklyResult.rows, exceptionResult.rows);
-
-    if (!availability || !availability.is_available) {
-      return false;
-    }
-
-    const availableStart = toMinutes(availability.starts_at);
-    const availableEnd = toMinutes(availability.ends_at);
-    const requestedStart = dateKey === toDateKey(start) ? start.getHours() * 60 + start.getMinutes() : availableStart;
-    const requestedEnd = dateKey === toDateKey(end) ? end.getHours() * 60 + end.getMinutes() : availableEnd;
-
-    return requestedStart >= availableStart && requestedEnd <= availableEnd;
-  });
-}
+const {
+  calculateTotalPrice,
+  findCompatibleSitterService,
+  hasAcceptedBookingOverlap,
+  hasInvalidDates,
+  isSitterAvailable
+} = require("../services/bookingService");
+const { createNotification } = require("../services/notificationService");
 
 function getPagination(query) {
   const limit = Math.min(Number(query.limit) || 20, 50);
@@ -132,13 +36,9 @@ function getBookingOrder(period) {
   return "b.starts_at desc";
 }
 
-async function createNotification(userId, bookingId, type, title, body) {
+async function createBookingNotification(notification) {
   try {
-    await pool.query(
-      `insert into notifications (user_id, booking_id, type, title, body)
-       values ($1, $2, $3, $4, $5)`,
-      [userId, bookingId, type, title, body]
-    );
+    await createNotification(notification);
   } catch (err) {
     console.error("Errore creazione notifica", err);
   }
@@ -161,7 +61,10 @@ async function listBookings(req, res, next) {
            b.id,
            b.starts_at,
            b.ends_at,
-           b.status,
+           case
+             when b.status = 'accepted' and b.ends_at < now() then 'completed'
+             else b.status
+           end as status,
            b.total_price,
            b.notes,
            b.created_at,
@@ -200,7 +103,10 @@ async function listBookings(req, res, next) {
            b.id,
            b.starts_at,
            b.ends_at,
-           b.status,
+           case
+             when b.status = 'accepted' and b.ends_at < now() then 'completed'
+             else b.status
+           end as status,
            b.total_price,
            b.notes,
            b.created_at,
@@ -258,25 +164,14 @@ async function createBooking(req, res, next) {
       });
     }
 
-    const serviceResult = await pool.query(
-      `select p.species as pet_type, ss.price, s.price_unit
-       from pets p
-       join sitter_services ss on ss.pet_type = p.species
-       join services s on s.id = ss.service_id
-       where p.id = $1
-         and p.owner_id = $2
-         and ss.sitter_id = $3
-         and ss.service_id = $4`,
-      [petId, req.user.id, sitterId, serviceId]
-    );
+    const service = await findCompatibleSitterService(req.user.id, petId, sitterId, serviceId);
 
-    if (serviceResult.rows.length === 0) {
+    if (!service) {
       return res.status(400).json({
         error: "Animale, sitter o servizio non compatibili"
       });
     }
 
-    const service = serviceResult.rows[0];
     const totalPrice = calculateTotalPrice(Number(service.price), service.price_unit, startsAt, endsAt);
     const available = await isSitterAvailable(sitterId, startsAt, endsAt);
 
@@ -303,13 +198,13 @@ async function createBooking(req, res, next) {
       ]
     );
 
-    await createNotification(
-      await findSitterUserId(sitterId),
-      bookingResult.rows[0].id,
-      "booking_created",
-      "Nuova richiesta di prenotazione",
-      "Hai ricevuto una nuova richiesta di prenotazione."
-    );
+    await createBookingNotification({
+      userId: await findSitterUserId(sitterId),
+      bookingId: bookingResult.rows[0].id,
+      type: "booking_created",
+      title: "Nuova richiesta di prenotazione",
+      body: "Hai ricevuto una nuova richiesta di prenotazione."
+    });
 
     return res.status(201).json({
       booking: bookingResult.rows[0]
@@ -319,11 +214,56 @@ async function createBooking(req, res, next) {
   }
 }
 
+async function quoteBooking(req, res, next) {
+  try {
+    const { sitterId, serviceId, petId, startsAt, endsAt } = req.body;
+
+    if (!sitterId || !serviceId || !petId || !startsAt || !endsAt) {
+      return res.status(400).json({
+        error: "Mancano campi richiesti"
+      });
+    }
+
+    if (hasInvalidDates(startsAt, endsAt)) {
+      return res.status(400).json({
+        error: "Date prenotazione non valide"
+      });
+    }
+
+    const service = await findCompatibleSitterService(req.user.id, petId, sitterId, serviceId);
+
+    if (!service) {
+      return res.status(400).json({
+        error: "Animale, sitter o servizio non compatibili"
+      });
+    }
+
+    const totalPrice = calculateTotalPrice(Number(service.price), service.price_unit, startsAt, endsAt);
+
+    return res.json({
+      quote: {
+        sitterId,
+        serviceId,
+        petId,
+        petType: service.pet_type,
+        serviceName: service.service_name,
+        price: Number(service.price),
+        priceUnit: service.price_unit,
+        totalPrice,
+        currency: "EUR"
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function findBookingForSitter(bookingId, sitterUserId) {
   const result = await pool.query(
-    `select b.id, b.owner_id, b.sitter_id, b.starts_at, b.ends_at, b.status
+    `select b.id, b.owner_id, b.sitter_id, b.starts_at, b.ends_at, b.status, s.availability_mode
      from bookings b
      join sitter_profiles sp on sp.id = b.sitter_id
+     join services s on s.id = b.service_id
      where b.id = $1
        and sp.user_id = $2`,
     [bookingId, sitterUserId]
@@ -341,22 +281,6 @@ async function findSitterUserId(sitterId) {
   );
 
   return result.rows[0] && result.rows[0].user_id;
-}
-
-async function hasAcceptedBookingOverlap(booking) {
-  const result = await pool.query(
-    `select id
-     from bookings
-     where sitter_id = $1
-       and id <> $2
-       and status = 'accepted'
-       and starts_at < $3
-       and ends_at > $4
-     limit 1`,
-    [booking.sitter_id, booking.id, booking.ends_at, booking.starts_at]
-  );
-
-  return result.rows.length > 0;
 }
 
 async function findBookingForOwner(bookingId, ownerId) {
@@ -412,13 +336,13 @@ async function acceptBooking(req, res, next) {
       [req.params.id]
     );
 
-    await createNotification(
-      booking.owner_id,
-      booking.id,
-      "booking_accepted",
-      "Richiesta accettata",
-      "Il sitter ha accettato la tua richiesta. Ora puoi procedere con il pagamento."
-    );
+    await createBookingNotification({
+      userId: booking.owner_id,
+      bookingId: booking.id,
+      type: "payment_required",
+      title: "Richiesta accettata",
+      body: "Il sitter ha accettato la tua richiesta. Ora puoi procedere con il pagamento."
+    });
 
     return res.json({
       booking: result.rows[0]
@@ -452,13 +376,13 @@ async function rejectBooking(req, res, next) {
       [req.params.id]
     );
 
-    await createNotification(
-      booking.owner_id,
-      booking.id,
-      "booking_rejected",
-      "Richiesta rifiutata",
-      "Il sitter ha rifiutato la tua richiesta di prenotazione."
-    );
+    await createBookingNotification({
+      userId: booking.owner_id,
+      bookingId: booking.id,
+      type: "booking_rejected",
+      title: "Richiesta rifiutata",
+      body: "Il sitter ha rifiutato la tua richiesta di prenotazione."
+    });
 
     return res.json({
       booking: result.rows[0]
@@ -492,13 +416,13 @@ async function cancelBooking(req, res, next) {
       [req.params.id]
     );
 
-    await createNotification(
-      booking.sitter_user_id,
-      booking.id,
-      "booking_cancelled",
-      "Prenotazione annullata",
-      "Il proprietario ha annullato una prenotazione."
-    );
+    await createBookingNotification({
+      userId: booking.sitter_user_id,
+      bookingId: booking.id,
+      type: "booking_cancelled",
+      title: "Prenotazione annullata",
+      body: "Il proprietario ha annullato una prenotazione."
+    });
 
     return res.json({
       booking: result.rows[0]
@@ -547,13 +471,23 @@ async function cancelBookingBySitter(req, res, next) {
 
     await client.query("commit");
 
-    await createNotification(
-      booking.owner_id,
-      booking.id,
-      "booking_cancelled",
-      "Prenotazione annullata",
-      "Il sitter ha annullato la prenotazione. Se avevi già pagato, riceverai un rimborso demo."
-    );
+    await createBookingNotification({
+      userId: booking.owner_id,
+      bookingId: booking.id,
+      type: "booking_cancelled",
+      title: "Prenotazione annullata",
+      body: "Il sitter ha annullato la prenotazione. Se avevi già pagato, riceverai un rimborso demo."
+    });
+
+    if (paymentResult.rows.length > 0) {
+      await createBookingNotification({
+        userId: booking.owner_id,
+        bookingId: booking.id,
+        type: "payment_refunded",
+        title: "Rimborso avviato",
+        body: "Il rimborso demo verrà accreditato sul metodo di pagamento usato per la prenotazione."
+      });
+    }
 
     return res.json({
       booking: bookingResult.rows[0],
@@ -573,5 +507,6 @@ module.exports = {
   cancelBookingBySitter,
   createBooking,
   listBookings,
+  quoteBooking,
   rejectBooking
 };
