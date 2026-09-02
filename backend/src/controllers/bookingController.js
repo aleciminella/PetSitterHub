@@ -68,6 +68,13 @@ async function listBookings(req, res, next) {
            b.total_price,
            b.notes,
            b.created_at,
+           (
+             select count(*)::integer
+             from messages m
+             where m.booking_id = b.id
+               and m.sender_id <> $1
+               and m.read_at is null
+           ) as unread_messages,
            pay.id as payment_id,
            pay.method as payment_method,
            pay.status as payment_status,
@@ -110,6 +117,13 @@ async function listBookings(req, res, next) {
            b.total_price,
            b.notes,
            b.created_at,
+           (
+             select count(*)::integer
+             from messages m
+             where m.booking_id = b.id
+               and m.sender_id <> $1
+               and m.read_at is null
+           ) as unread_messages,
            pay.id as payment_id,
            pay.method as payment_method,
            pay.status as payment_status,
@@ -393,6 +407,8 @@ async function rejectBooking(req, res, next) {
 }
 
 async function cancelBooking(req, res, next) {
+  const client = await pool.connect();
+
   try {
     const booking = await findBookingForOwner(req.params.id, req.user.id);
 
@@ -408,13 +424,26 @@ async function cancelBooking(req, res, next) {
       });
     }
 
-    const result = await pool.query(
+    await client.query("begin");
+
+    const bookingResult = await client.query(
       `update bookings
        set status = 'cancelled', updated_at = now()
        where id = $1
        returning id, status, updated_at`,
       [req.params.id]
     );
+
+    const paymentResult = await client.query(
+      `update payments
+       set status = 'refunded'
+       where booking_id = $1
+         and status in ('authorized', 'paid')
+       returning id, booking_id, amount, method, status, provider_reference, created_at`,
+      [req.params.id]
+    );
+
+    await client.query("commit");
 
     await createBookingNotification({
       userId: booking.sitter_user_id,
@@ -424,11 +453,25 @@ async function cancelBooking(req, res, next) {
       body: "Il proprietario ha annullato una prenotazione."
     });
 
+    if (paymentResult.rows.length > 0) {
+      await createBookingNotification({
+        userId: booking.owner_id,
+        bookingId: booking.id,
+        type: "payment_refunded",
+        title: "Rimborso avviato",
+        body: "Il rimborso demo verrà accreditato sul metodo di pagamento usato per la prenotazione."
+      });
+    }
+
     return res.json({
-      booking: result.rows[0]
+      booking: bookingResult.rows[0],
+      payment: paymentResult.rows[0] || null
     });
   } catch (err) {
+    await client.query("rollback");
     return next(err);
+  } finally {
+    client.release();
   }
 }
 

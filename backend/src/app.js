@@ -12,9 +12,10 @@ const serviceRoutes = require("./routes/serviceRoutes");
 const sitterRoutes = require("./routes/sitterRoutes");
 
 const app = express();
+const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5500";
 
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:5500");
+  res.header("Access-Control-Allow-Origin", frontendOrigin);
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -25,7 +26,7 @@ app.use((req, res, next) => {
   return next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);

@@ -13,6 +13,7 @@ async function getMySitterProfile(req, res, next) {
          sp.id as sitter_id,
          sp.bio,
          sp.base_city,
+         sp.profile_image_url,
          sp.verified,
          sp.created_at
        from users u
@@ -31,7 +32,7 @@ async function getMySitterProfile(req, res, next) {
 
 async function updateMySitterProfile(req, res, next) {
   try {
-    const { bio, baseCity } = req.body;
+    const { bio, baseCity, profileImageUrl } = req.body;
 
     if (!baseCity || baseCity.trim().length === 0) {
       return res.status(400).json({
@@ -40,13 +41,14 @@ async function updateMySitterProfile(req, res, next) {
     }
 
     const result = await pool.query(
-      `insert into sitter_profiles (user_id, bio, base_city)
-       values ($1, $2, $3)
+      `insert into sitter_profiles (user_id, bio, base_city, profile_image_url)
+       values ($1, $2, $3, $4)
        on conflict (user_id) do update set
          bio = excluded.bio,
-         base_city = excluded.base_city
-       returning id, user_id, bio, base_city, verified, created_at`,
-      [req.user.id, bio || null, baseCity.trim()]
+         base_city = excluded.base_city,
+         profile_image_url = excluded.profile_image_url
+       returning id, user_id, bio, base_city, profile_image_url, verified, created_at`,
+      [req.user.id, bio || null, baseCity.trim(), profileImageUrl || null]
     );
 
     return res.json({
@@ -539,14 +541,32 @@ async function listSitters(req, res, next) {
          sp.id,
          sp.bio,
          sp.base_city,
+         sp.profile_image_url,
          sp.verified,
          u.first_name,
          u.last_name,
+         coalesce((
+           select round(avg(r.rating)::numeric, 1)
+           from reviews r
+           where r.sitter_id = sp.id
+         ), 0) as average_rating,
+         (
+           select count(*)::integer
+           from reviews r
+           where r.sitter_id = sp.id
+         ) as review_count,
+         coalesce((
+           select json_agg(spt.pet_type order by spt.pet_type)
+           from sitter_pet_types spt
+           where spt.sitter_id = sp.id
+         ), '[]') as pet_types,
          coalesce(
            json_agg(
              json_build_object(
                'id', s.id,
                'name', s.name,
+               'price_unit', s.price_unit,
+               'availability_mode', s.availability_mode,
                'pet_type', ss.pet_type,
                'price', ss.price
              )
