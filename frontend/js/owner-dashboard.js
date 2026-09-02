@@ -197,6 +197,29 @@ function getBookingStatusLabel(status, paymentStatus) {
     return status;
 }
 
+function canPayBooking(booking) {
+    return booking.status === "accepted" && !booking.payment_status;
+}
+
+function renderPaymentForm(booking) {
+    if (!canPayBooking(booking)) {
+        return "";
+    }
+    return `
+        <form class="payment-form row g-2 mt-3" data-id="${booking.id}">
+            <div class="col-md-8">
+                <select class="form-select payment-method" required>
+                    <option value="demo_card">Carta demo</option>
+                    <option value="bank_transfer">Bonifico</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary w-100" type="submit">Paga</button>
+            </div>
+        </form>
+    `;
+}
+
 function renderBookings(bookings, append) {
     if (!append) {
         $("#bookingsList").html("");
@@ -230,6 +253,7 @@ function renderBookings(bookings, append) {
                         </button>
                     </div>
                 ` : ""}
+                ${renderPaymentForm(booking)}
                 <div class="mt-3">
                 <button class="btn btn-outline-secondary btn-sm toggle-messages-button" type="button" data-id="${booking.id}">
                     Messaggi
@@ -292,6 +316,29 @@ function cancelBooking(bookingId) {
         }
     });
 }
+
+function payBooking(bookingId, method) {
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/payments`,
+        method: "POST",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify({ method }),
+        success: function () {
+            loadBookings();
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.error
+                ? xhr.responseJSON.error
+                : "Errore durante il pagamento.";
+            $("#bookingsMessage")
+                .removeClass("d-none alert-success")
+                .addClass("alert-danger")
+                .text(message);
+        }
+    });
+}
+
 function renderMessages(container, messages) {
     if (!messages.length) {
         container.html('<div class="text-muted">Nessun messaggio.</div>');
@@ -491,5 +538,11 @@ $(document).ready(function () {
     
     $("#ownerNotificationsList").on("click", ".delete-notification-button", function () {
         deleteNotification($(this).data("id"));
+    });
+    $(document).on("submit", ".payment-form", function (event) {
+        event.preventDefault();
+        const bookingId = $(this).data("id");
+        const method = $(this).find(".payment-method").val();
+        payBooking(bookingId, method);
     });
 });
