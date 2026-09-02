@@ -220,6 +220,14 @@ function renderPaymentForm(booking) {
     `;
 }
 
+function renderUnreadMessagesBadge(booking) {
+    const unreadMessages = Number(booking.unread_messages || 0);
+    if (unreadMessages === 0) {
+        return "";
+    }
+    return `<span class="message-count-badge">${unreadMessages}</span>`;
+}
+
 function renderBookings(bookings, append) {
     if (!append) {
         $("#bookingsList").html("");
@@ -255,8 +263,8 @@ function renderBookings(bookings, append) {
                 ` : ""}
                 ${renderPaymentForm(booking)}
                 <div class="mt-3">
-                <button class="btn btn-outline-secondary btn-sm toggle-messages-button" type="button" data-id="${booking.id}">
-                    Messaggi
+                <button class="btn btn-outline-secondary btn-sm toggle-messages-button position-relative" type="button" data-id="${booking.id}"> 
+                     Messaggi ${renderUnreadMessagesBadge(booking)}
                 </button>
             </div>
             <div class="booking-message-box d-none" id="messages-${booking.id}">
