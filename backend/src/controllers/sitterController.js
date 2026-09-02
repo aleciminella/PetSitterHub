@@ -542,11 +542,28 @@ async function listSitters(req, res, next) {
          sp.verified,
          u.first_name,
          u.last_name,
+         coalesce((
+           select round(avg(r.rating)::numeric, 1)
+           from reviews r
+           where r.sitter_id = sp.id
+         ), 0) as average_rating,
+         (
+           select count(*)::integer
+           from reviews r
+           where r.sitter_id = sp.id
+         ) as review_count,
+         coalesce((
+           select json_agg(spt.pet_type order by spt.pet_type)
+           from sitter_pet_types spt
+           where spt.sitter_id = sp.id
+         ), '[]') as pet_types,
          coalesce(
            json_agg(
              json_build_object(
                'id', s.id,
                'name', s.name,
+               'price_unit', s.price_unit,
+               'availability_mode', s.availability_mode,
                'pet_type', ss.pet_type,
                'price', ss.price
              )
