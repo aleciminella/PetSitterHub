@@ -1,4 +1,5 @@
 const express = require("express");
+const availabilityController = require("../controllers/availabilityController");
 const sitterController = require("../controllers/sitterController");
 const { requireRole, verifyToken } = require("../middleware/authMiddleware");
 
@@ -13,6 +14,7 @@ router.get("/me/pet-types", verifyToken, requireRole("sitter"), sitterController
 router.put("/me/pet-types", verifyToken, requireRole("sitter"), sitterController.updateMyPetTypes);
 router.get("/me/services", verifyToken, requireRole("sitter"), sitterController.listMyServices);
 router.put("/me/services", verifyToken, requireRole("sitter"), sitterController.updateMyServices);
+router.get("/:sitterId/availability/check", availabilityController.checkSitterAvailability);
 router.get("/", sitterController.listSitters);
 
 module.exports = router;

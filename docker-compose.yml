@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: petsitterhub-db
+    env_file:
+      - path: .env.docker
+        required: false
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-petsitterhub}
+      POSTGRES_USER: ${POSTGRES_USER:-petsitterhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-petsitterhub}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: petsitterhub-backend
+    env_file:
+      - path: .env.docker
+        required: false
+    environment:
+      PORT: ${BACKEND_PORT:-4000}
+      DATABASE_URL: postgres://${POSTGRES_USER:-petsitterhub}:${POSTGRES_PASSWORD:-petsitterhub}@db:5432/${POSTGRES_DB:-petsitterhub}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5500}
+    ports:
+      - "${BACKEND_PORT:-4000}:${BACKEND_PORT:-4000}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: nginx:1.27-alpine
+    container_name: petsitterhub-frontend
+    ports:
+      - "${FRONTEND_PORT:-5500}:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

@@ -1,15 +1,20 @@
 const pool = require("../db/pool");
+const { createNotification } = require("../services/notificationService");
 
-async function createNotification(userId, bookingId, title, body) {
-  await pool.query(
-    `insert into notifications (user_id, booking_id, type, title, body)
-     values ($1, $2, 'review_received', $3, $4)`,
-    [userId, bookingId, title, body]
-  );
+function getPagination(query) {
+  const limit = Math.min(Number(query.limit) || 5, 30);
+  const offset = Number(query.offset) || 0;
+
+  return {
+    limit: Math.max(limit, 1),
+    offset: Math.max(offset, 0)
+  };
 }
 
 async function listSitterReviews(req, res, next) {
   try {
+    const pagination = getPagination(req.query);
+
     const result = await pool.query(
       `select
          r.id,
@@ -21,8 +26,10 @@ async function listSitterReviews(req, res, next) {
        from reviews r
        join users u on u.id = r.owner_id
        where r.sitter_id = $1
-       order by r.created_at desc`,
-      [req.params.sitterId]
+       order by r.created_at desc
+       limit $2
+       offset $3`,
+      [req.params.sitterId, pagination.limit, pagination.offset]
     );
 
     return res.json({
@@ -78,12 +85,13 @@ async function createReview(req, res, next) {
       ]
     );
 
-    await createNotification(
-      booking.sitter_user_id,
-      booking.id,
-      "Nuova recensione ricevuta",
-      `Hai ricevuto una recensione da ${parsedRating} stelle.`
-    );
+    await createNotification({
+      userId: booking.sitter_user_id,
+      bookingId: booking.id,
+      type: "review_received",
+      title: "Nuova recensione ricevuta",
+      body: `Hai ricevuto una recensione da ${parsedRating} stelle.`
+    });
 
     return res.status(201).json({
       review: result.rows[0]
