@@ -169,15 +169,63 @@ function formatDateTime(value) {
     return new Date(value).toLocaleString("it-IT");
 }
 
-function getBookingStatusLabel(status) {
-    const labels = {
-        pending: "In attesa di conferma",
-        accepted: "Accettata",
-        rejected: "Richiesta rifiutata",
-        cancelled: "Annullata",
-        completed: "Completata"
-    };
-    return labels[status] || status;
+function getBookingStatusLabel(status, paymentStatus) {
+    if (status === "pending") {
+        return "In attesa di conferma";
+    }
+    if (status === "accepted" && !paymentStatus) {
+        return "In attesa di pagamento";
+    }
+    if (status === "rejected") {
+        return "Richiesta rifiutata";
+    }
+    if (status === "cancelled") {
+        return "Annullata";
+    }
+    if (status === "completed") {
+        return "Completata";
+    }
+    if (paymentStatus === "paid") {
+        return "Pagamento effettuato";
+    }
+    if (paymentStatus === "authorized") {
+        return "Bonifico in verifica";
+    }
+    if (paymentStatus === "refunded") {
+        return "Rimborso avviato";
+    }
+    return status;
+}
+
+function canPayBooking(booking) {
+    return booking.status === "accepted" && !booking.payment_status;
+}
+
+function renderPaymentForm(booking) {
+    if (!canPayBooking(booking)) {
+        return "";
+    }
+    return `
+        <form class="payment-form row g-2 mt-3" data-id="${booking.id}">
+            <div class="col-md-8">
+                <select class="form-select payment-method" required>
+                    <option value="demo_card">Carta demo</option>
+                    <option value="bank_transfer">Bonifico</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary w-100" type="submit">Paga</button>
+            </div>
+        </form>
+    `;
+}
+
+function renderUnreadMessagesBadge(booking) {
+    const unreadMessages = Number(booking.unread_messages || 0);
+    if (unreadMessages === 0) {
+        return "";
+    }
+    return `<span class="message-count-badge">${unreadMessages}</span>`;
 }
 
 function renderBookings(bookings, append) {
@@ -203,7 +251,7 @@ function renderBookings(bookings, append) {
                         <p class="mb-0">${booking.notes || "Nessuna nota."}</p>
                     </div>
                     <span class="booking-status booking-status-${booking.status}">
-                        ${getBookingStatusLabel(booking.status)}
+                    ${getBookingStatusLabel(booking.status, booking.payment_status)}
                     </span>
                 </div>
                 ${["pending", "accepted"].includes(booking.status) ? `
@@ -213,9 +261,10 @@ function renderBookings(bookings, append) {
                         </button>
                     </div>
                 ` : ""}
+                ${renderPaymentForm(booking)}
                 <div class="mt-3">
-                <button class="btn btn-outline-secondary btn-sm toggle-messages-button" type="button" data-id="${booking.id}">
-                    Messaggi
+                <button class="btn btn-outline-secondary btn-sm toggle-messages-button position-relative" type="button" data-id="${booking.id}"> 
+                     Messaggi ${renderUnreadMessagesBadge(booking)}
                 </button>
             </div>
             <div class="booking-message-box d-none" id="messages-${booking.id}">
@@ -275,6 +324,29 @@ function cancelBooking(bookingId) {
         }
     });
 }
+
+function payBooking(bookingId, method) {
+    $.ajax({
+        url: `${API_BASE_URL}/bookings/${bookingId}/payments`,
+        method: "POST",
+        headers: authHeaders(),
+        contentType: "application/json",
+        data: JSON.stringify({ method }),
+        success: function () {
+            loadBookings();
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.error
+                ? xhr.responseJSON.error
+                : "Errore durante il pagamento.";
+            $("#bookingsMessage")
+                .removeClass("d-none alert-success")
+                .addClass("alert-danger")
+                .text(message);
+        }
+    });
+}
+
 function renderMessages(container, messages) {
     if (!messages.length) {
         container.html('<div class="text-muted">Nessun messaggio.</div>');
@@ -342,17 +414,21 @@ function renderNotifications(notifications, append) {
     }
     const html = notifications.map(function (notification) {
         return `
-            <article class="booking-message-item ${notification.is_read ? "" : "border border-primary"}">
-                <div class="d-flex justify-content-between gap-3">
-                    <div>
-                        <strong>${notification.title}</strong>
-                        <p class="mb-1">${notification.body}</p>
-                        <small class="text-muted">${formatDateTime(notification.created_at)}</small>
-                    </div>
-                    <div class="d-flex gap-2 align-items-start">
-                        ${notification.is_read ? "" : `<button class="btn btn-outline-primary btn-sm read-notification-button" type="button" data-id="${notification.id}">Letta</button>`}
-                        <button class="btn btn-outline-danger btn-sm delete-notification-button" type="button" data-id="${notification.id}">Elimina</button>
-                    </div>
+            <article class="notification-item ${notification.is_read ? "" : "notification-unread"}">
+                <div>
+                    <strong>${notification.title}</strong>
+                    <p class="mb-1">${notification.body}</p>
+                    <small class="text-muted">${formatDateTime(notification.created_at)}</small>
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                    ${notification.is_read ? "" : `
+                        <button class="btn btn-outline-primary btn-sm mark-notification-read-button" type="button" data-id="${notification.id}">
+                            Segna letta
+                        </button>
+                    `}
+                    <button class="btn btn-outline-danger btn-sm delete-notification-button" type="button" data-id="${notification.id}">
+                        Elimina
+                    </button>
                 </div>
             </article>
         `;
@@ -364,6 +440,7 @@ function renderNotifications(notifications, append) {
 function loadNotifications(append = false) {
     if (!append) {
         notificationsOffset = 0;
+        $("#ownerNotificationsList").html('<div class="empty-state">Caricamento notifiche...</div>');
     }
     $.ajax({
         url: `${API_BASE_URL}/notifications?limit=${NOTIFICATIONS_LIMIT}&offset=${notificationsOffset}`,
@@ -376,10 +453,12 @@ function loadNotifications(append = false) {
             $("#ownerNotificationsBadge")
                 .toggleClass("d-none", !response.unreadCount)
                 .text(response.unreadCount || "");
+            $("#markAllNotificationsReadButton").toggleClass("d-none", !response.unreadCount);
             renderNotifications(notifications, append);
         },
         error: function () {
             $("#ownerNotificationsList").html('<div class="empty-state text-danger">Errore durante il caricamento delle notifiche.</div>');
+            $("#loadMoreNotificationsButton").addClass("d-none");
         }
     });
 }
@@ -424,30 +503,26 @@ $(document).ready(function () {
 
     loadPets();
     loadBookings();
-    loadNotifications(); 
+    loadNotifications();
+
     $("#refreshPetsButton").on("click", loadPets);
     $("#bookingPeriod").on("change", function () {
         loadBookings();
     });
-    
     $("#loadMoreBookingsButton").on("click", function () {
         loadBookings(true);
     });
     $("#petForm").on("submit", savePet);
-
+    $("#cancelEditPetButton").on("click", resetPetForm);
     $("#petsList").on("click", ".edit-pet-button", function () {
         startPetEdit($(this).data("id"));
     });
-
     $("#petsList").on("click", ".delete-pet-button", function () {
         deletePet($(this).data("id"));
     });
-
-    $("#cancelEditPetButton").on("click", resetPetForm);
     $("#bookingsList").on("click", ".cancel-booking-button", function () {
         cancelBooking($(this).data("id"));
     });
-
     $("#bookingsList").on("click", ".toggle-messages-button", function () {
         const bookingId = $(this).data("id");
         const box = $(`#messages-${bookingId}`);
@@ -456,22 +531,24 @@ $(document).ready(function () {
             loadMessages(bookingId);
         }
     });
-    
     $("#bookingsList").on("click", ".send-message-button", function () {
         const bookingId = $(this).data("id");
         const input = $(`#messages-${bookingId}`).find(".message-input");
         sendMessage(bookingId, input);
     });
+    $(document).on("submit", ".payment-form", function (event) {
+        event.preventDefault();
+        const bookingId = $(this).data("id");
+        const method = $(this).find(".payment-method").val();
+        payBooking(bookingId, method);
+    });
     $("#loadMoreNotificationsButton").on("click", function () {
         loadNotifications(true);
     });
-    
     $("#markAllNotificationsReadButton").on("click", markAllNotificationsAsRead);
-    
-    $("#ownerNotificationsList").on("click", ".read-notification-button", function () {
+    $("#ownerNotificationsList").on("click", ".mark-notification-read-button", function () {
         markNotificationAsRead($(this).data("id"));
     });
-    
     $("#ownerNotificationsList").on("click", ".delete-notification-button", function () {
         deleteNotification($(this).data("id"));
     });
