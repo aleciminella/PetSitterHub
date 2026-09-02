@@ -67,7 +67,7 @@ function eachBookingDate(startsAt, endsAt) {
   return dates;
 }
 
-async function isSitterAvailable(sitterId, startsAt, endsAt) {
+async function matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt) {
   const start = new Date(startsAt);
   const end = new Date(endsAt);
 
@@ -104,8 +104,13 @@ async function isSitterAvailable(sitterId, startsAt, endsAt) {
   });
 }
 
+async function isSitterAvailable(sitterId, startsAt, endsAt) {
+  return matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt);
+}
+
 module.exports = {
   calculateTotalPrice,
   hasInvalidDates,
-  isSitterAvailable
+  isSitterAvailable,
+  matchesSitterAvailabilitySchedule
 };
