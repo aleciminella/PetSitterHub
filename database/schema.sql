@@ -15,6 +15,7 @@ create table sitter_profiles (
   user_id bigint not null unique references users(id) on delete cascade,
   bio text,
   base_city varchar(100) not null,
+  profile_image_url text,
   verified boolean not null default false,
   created_at timestamptz not null default now()
 );

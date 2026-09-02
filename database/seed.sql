@@ -73,17 +73,25 @@ on conflict (owner_id, name) do update set
   age = excluded.age,
   notes = excluded.notes;
 
-insert into sitter_profiles (user_id, bio, base_city, verified)
-select id, 'Mi occupo di cani e gatti con esperienza e attenzione.', city, true
+insert into sitter_profiles (user_id, bio, base_city, profile_image_url, verified)
+select id, 'Mi occupo di cani e gatti con esperienza e attenzione.', city, 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', true
 from users
 where email = 'giulia.sitter@example.com'
-on conflict (user_id) do nothing;
+on conflict (user_id) do update set
+  bio = excluded.bio,
+  base_city = excluded.base_city,
+  profile_image_url = excluded.profile_image_url,
+  verified = excluded.verified;
 
-insert into sitter_profiles (user_id, bio, base_city, verified)
-select id, 'Disponibile per passeggiate e pet-sitting nel weekend.', city, false
+insert into sitter_profiles (user_id, bio, base_city, profile_image_url, verified)
+select id, 'Disponibile per passeggiate e pet-sitting nel weekend.', city, null, false
 from users
 where email = 'luca.sitter@example.com'
-on conflict (user_id) do nothing;
+on conflict (user_id) do update set
+  bio = excluded.bio,
+  base_city = excluded.base_city,
+  profile_image_url = excluded.profile_image_url,
+  verified = excluded.verified;
 
 insert into sitter_weekly_availability (sitter_id, weekday, is_available, starts_at, ends_at)
 select sp.id, weekly_availability.weekday, weekly_availability.is_available, weekly_availability.starts_at::time, weekly_availability.ends_at::time
