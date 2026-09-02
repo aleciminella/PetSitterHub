@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-petsitterhub}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-petsitterhub}
     ports:
-      - "5433:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
@@ -34,7 +34,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5500}
     ports:
-      - "4000:4000"
+      - "${BACKEND_PORT:-4000}:${BACKEND_PORT:-4000}"
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
     image: nginx:1.27-alpine
     container_name: petsitterhub-frontend
     ports:
-      - "5500:80"
+      - "${FRONTEND_PORT:-5500}:80"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
     depends_on:

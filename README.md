@@ -23,6 +23,8 @@ Backend:  http://localhost:4000/api/health
 Database: localhost:5433
 ```
 
+Le porte e le credenziali locali si possono cambiare nel file `.env.docker`.
+
 Credenziali database Docker:
 
 ```text
