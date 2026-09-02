@@ -68,6 +68,13 @@ async function listBookings(req, res, next) {
            b.total_price,
            b.notes,
            b.created_at,
+           (
+             select count(*)::integer
+             from messages m
+             where m.booking_id = b.id
+               and m.sender_id <> $1
+               and m.read_at is null
+           ) as unread_messages,
            pay.id as payment_id,
            pay.method as payment_method,
            pay.status as payment_status,
@@ -110,6 +117,13 @@ async function listBookings(req, res, next) {
            b.total_price,
            b.notes,
            b.created_at,
+           (
+             select count(*)::integer
+             from messages m
+             where m.booking_id = b.id
+               and m.sender_id <> $1
+               and m.read_at is null
+           ) as unread_messages,
            pay.id as payment_id,
            pay.method as payment_method,
            pay.status as payment_status,
