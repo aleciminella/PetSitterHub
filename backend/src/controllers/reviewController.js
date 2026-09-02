@@ -1,8 +1,20 @@
 const pool = require("../db/pool");
 const { createNotification } = require("../services/notificationService");
 
+function getPagination(query) {
+  const limit = Math.min(Number(query.limit) || 5, 30);
+  const offset = Number(query.offset) || 0;
+
+  return {
+    limit: Math.max(limit, 1),
+    offset: Math.max(offset, 0)
+  };
+}
+
 async function listSitterReviews(req, res, next) {
   try {
+    const pagination = getPagination(req.query);
+
     const result = await pool.query(
       `select
          r.id,
@@ -14,8 +26,10 @@ async function listSitterReviews(req, res, next) {
        from reviews r
        join users u on u.id = r.owner_id
        where r.sitter_id = $1
-       order by r.created_at desc`,
-      [req.params.sitterId]
+       order by r.created_at desc
+       limit $2
+       offset $3`,
+      [req.params.sitterId, pagination.limit, pagination.offset]
     );
 
     return res.json({
