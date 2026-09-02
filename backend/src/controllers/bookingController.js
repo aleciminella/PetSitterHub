@@ -219,6 +219,61 @@ async function createBooking(req, res, next) {
   }
 }
 
+async function quoteBooking(req, res, next) {
+  try {
+    const { sitterId, serviceId, petId, startsAt, endsAt } = req.body;
+
+    if (!sitterId || !serviceId || !petId || !startsAt || !endsAt) {
+      return res.status(400).json({
+        error: "Mancano campi richiesti"
+      });
+    }
+
+    if (hasInvalidDates(startsAt, endsAt)) {
+      return res.status(400).json({
+        error: "Date prenotazione non valide"
+      });
+    }
+
+    const serviceResult = await pool.query(
+      `select p.species as pet_type, ss.price, s.name as service_name, s.price_unit
+       from pets p
+       join sitter_services ss on ss.pet_type = p.species
+       join services s on s.id = ss.service_id
+       where p.id = $1
+         and p.owner_id = $2
+         and ss.sitter_id = $3
+         and ss.service_id = $4`,
+      [petId, req.user.id, sitterId, serviceId]
+    );
+
+    if (serviceResult.rows.length === 0) {
+      return res.status(400).json({
+        error: "Animale, sitter o servizio non compatibili"
+      });
+    }
+
+    const service = serviceResult.rows[0];
+    const totalPrice = calculateTotalPrice(Number(service.price), service.price_unit, startsAt, endsAt);
+
+    return res.json({
+      quote: {
+        sitterId,
+        serviceId,
+        petId,
+        petType: service.pet_type,
+        serviceName: service.service_name,
+        price: Number(service.price),
+        priceUnit: service.price_unit,
+        totalPrice,
+        currency: "EUR"
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function findBookingForSitter(bookingId, sitterUserId) {
   const result = await pool.query(
     `select b.id, b.owner_id, b.sitter_id, b.starts_at, b.ends_at, b.status
@@ -483,5 +538,6 @@ module.exports = {
   cancelBookingBySitter,
   createBooking,
   listBookings,
+  quoteBooking,
   rejectBooking
 };
