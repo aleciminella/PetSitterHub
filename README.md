@@ -5,6 +5,12 @@ Piattaforma web per la ricerca, prenotazione e gestione di servizi di pet-sittin
 
 Docker avvia PostgreSQL, backend Express e frontend statico.
 
+Prima del primo avvio creare il file di configurazione Docker:
+
+```bash
+cp .env.docker.example .env.docker
+```
+
 ```bash
 docker compose up --build
 ```

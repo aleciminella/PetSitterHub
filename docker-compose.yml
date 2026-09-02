@@ -2,10 +2,13 @@ services:
   db:
     image: postgres:17-alpine
     container_name: petsitterhub-db
+    env_file:
+      - path: .env.docker
+        required: false
     environment:
-      POSTGRES_DB: petsitterhub
-      POSTGRES_USER: petsitterhub
-      POSTGRES_PASSWORD: petsitterhub
+      POSTGRES_DB: ${POSTGRES_DB:-petsitterhub}
+      POSTGRES_USER: ${POSTGRES_USER:-petsitterhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-petsitterhub}
     ports:
       - "5433:5432"
     volumes:
@@ -13,7 +16,7 @@ services:
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U petsitterhub -d petsitterhub"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,11 +25,14 @@ services:
     build:
       context: ./backend
     container_name: petsitterhub-backend
+    env_file:
+      - path: .env.docker
+        required: false
     environment:
-      PORT: 4000
-      DATABASE_URL: postgres://petsitterhub:petsitterhub@db:5432/petsitterhub
-      JWT_SECRET: dev-secret
-      FRONTEND_ORIGIN: http://localhost:5500
+      PORT: ${BACKEND_PORT:-4000}
+      DATABASE_URL: postgres://${POSTGRES_USER:-petsitterhub}:${POSTGRES_PASSWORD:-petsitterhub}@db:5432/${POSTGRES_DB:-petsitterhub}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5500}
     ports:
       - "4000:4000"
     depends_on:
