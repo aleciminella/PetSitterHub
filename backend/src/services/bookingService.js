@@ -1,5 +1,6 @@
 const pool = require("../db/pool");
 const SLOT_MINUTES = 60;
+const ACTIVE_BOOKING_STATUSES = ["accepted"];
 
 function calculateTotalPrice(price, priceUnit, startsAt, endsAt) {
   const start = new Date(startsAt);
@@ -135,9 +136,47 @@ async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) 
   return result.rows[0] || null;
 }
 
+function getConflictAvailabilityModes(availabilityMode) {
+  const conflictModes = {
+    daily_exclusive: ["hourly_slot", "fixed_slot", "daily_exclusive", "daily_non_exclusive"],
+    daily_non_exclusive: ["daily_exclusive"],
+    fixed_slot: ["hourly_slot", "fixed_slot", "daily_exclusive"],
+    hourly_slot: ["hourly_slot", "fixed_slot", "daily_exclusive"]
+  };
+
+  return conflictModes[availabilityMode] || conflictModes.hourly_slot;
+}
+
+async function hasAcceptedBookingOverlap(booking) {
+  const result = await pool.query(
+    `select b.id
+     from bookings b
+     join services s on s.id = b.service_id
+     where b.sitter_id = $1
+       and b.id <> $2
+       and b.status = any($5)
+       and b.starts_at < $3
+       and b.ends_at > $4
+       and s.availability_mode = any($6)
+     limit 1`,
+    [
+      booking.sitter_id,
+      booking.id,
+      booking.ends_at,
+      booking.starts_at,
+      ACTIVE_BOOKING_STATUSES,
+      getConflictAvailabilityModes(booking.availability_mode)
+    ]
+  );
+
+  return result.rows.length > 0;
+}
+
 module.exports = {
+  ACTIVE_BOOKING_STATUSES,
   calculateTotalPrice,
   findCompatibleSitterService,
+  hasAcceptedBookingOverlap,
   hasInvalidDates,
   isSitterAvailable,
   matchesSitterAvailabilitySchedule

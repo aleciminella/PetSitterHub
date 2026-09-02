@@ -2,6 +2,7 @@ const pool = require("../db/pool");
 const {
   calculateTotalPrice,
   findCompatibleSitterService,
+  hasAcceptedBookingOverlap,
   hasInvalidDates,
   isSitterAvailable
 } = require("../services/bookingService");
@@ -259,9 +260,10 @@ async function quoteBooking(req, res, next) {
 
 async function findBookingForSitter(bookingId, sitterUserId) {
   const result = await pool.query(
-    `select b.id, b.owner_id, b.sitter_id, b.starts_at, b.ends_at, b.status
+    `select b.id, b.owner_id, b.sitter_id, b.starts_at, b.ends_at, b.status, s.availability_mode
      from bookings b
      join sitter_profiles sp on sp.id = b.sitter_id
+     join services s on s.id = b.service_id
      where b.id = $1
        and sp.user_id = $2`,
     [bookingId, sitterUserId]
@@ -279,22 +281,6 @@ async function findSitterUserId(sitterId) {
   );
 
   return result.rows[0] && result.rows[0].user_id;
-}
-
-async function hasAcceptedBookingOverlap(booking) {
-  const result = await pool.query(
-    `select id
-     from bookings
-     where sitter_id = $1
-       and id <> $2
-       and status = 'accepted'
-       and starts_at < $3
-       and ends_at > $4
-     limit 1`,
-    [booking.sitter_id, booking.id, booking.ends_at, booking.starts_at]
-  );
-
-  return result.rows.length > 0;
 }
 
 async function findBookingForOwner(bookingId, ownerId) {
