@@ -216,11 +216,44 @@ async function promoteUserToAdmin(req, res, next) {
   }
 }
 
+async function updateSitterVerification(req, res, next) {
+  try {
+    const { verified } = req.body;
+
+    if (typeof verified !== "boolean") {
+      return res.status(400).json({
+        error: "Stato verifica non valido"
+      });
+    }
+
+    const result = await pool.query(
+      `update sitter_profiles
+       set verified = $1
+       where id = $2
+       returning id, user_id, bio, base_city, verified, created_at`,
+      [verified, req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Profilo sitter non trovato"
+      });
+    }
+
+    return res.json({
+      sitter: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   deleteUser,
   getOverview,
   listBookings,
   listReviews,
   listUsers,
-  promoteUserToAdmin
+  promoteUserToAdmin,
+  updateSitterVerification
 };
