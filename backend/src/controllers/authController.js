@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const pool = require("../db/pool");
 const { createToken } = require("../middleware/authMiddleware");
 
-const allowedRoles = ["owner", "sitter", "admin"];
+const allowedRegistrationRoles = ["owner", "sitter"];
 
 async function register(req, res, next) {
   try {
@@ -14,7 +14,7 @@ async function register(req, res, next) {
       });
     }
 
-    if (!allowedRoles.includes(role)) {
+    if (!allowedRegistrationRoles.includes(role)) {
       return res.status(400).json({
         error: "Ruolo invalido"
       });
@@ -89,7 +89,31 @@ async function login(req, res, next) {
   }
 }
 
+async function getProfile(req, res, next) {
+  try {
+    const result = await pool.query(
+      `select id, email, first_name, last_name, role, phone, city, created_at
+       from users
+       where id = $1`,
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Utente non trovato"
+      });
+    }
+
+    return res.json({
+      user: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
+  getProfile,
   login,
   register
 };
