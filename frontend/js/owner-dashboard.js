@@ -169,15 +169,32 @@ function formatDateTime(value) {
     return new Date(value).toLocaleString("it-IT");
 }
 
-function getBookingStatusLabel(status) {
-    const labels = {
-        pending: "In attesa di conferma",
-        accepted: "Accettata",
-        rejected: "Richiesta rifiutata",
-        cancelled: "Annullata",
-        completed: "Completata"
-    };
-    return labels[status] || status;
+function getBookingStatusLabel(status, paymentStatus) {
+    if (status === "pending") {
+        return "In attesa di conferma";
+    }
+    if (status === "accepted" && !paymentStatus) {
+        return "In attesa di pagamento";
+    }
+    if (status === "rejected") {
+        return "Richiesta rifiutata";
+    }
+    if (status === "cancelled") {
+        return "Annullata";
+    }
+    if (status === "completed") {
+        return "Completata";
+    }
+    if (paymentStatus === "paid") {
+        return "Pagamento effettuato";
+    }
+    if (paymentStatus === "authorized") {
+        return "Bonifico in verifica";
+    }
+    if (paymentStatus === "refunded") {
+        return "Rimborso avviato";
+    }
+    return status;
 }
 
 function renderBookings(bookings, append) {
@@ -203,7 +220,7 @@ function renderBookings(bookings, append) {
                         <p class="mb-0">${booking.notes || "Nessuna nota."}</p>
                     </div>
                     <span class="booking-status booking-status-${booking.status}">
-                        ${getBookingStatusLabel(booking.status)}
+                    ${getBookingStatusLabel(booking.status, booking.payment_status)}
                     </span>
                 </div>
                 ${["pending", "accepted"].includes(booking.status) ? `
