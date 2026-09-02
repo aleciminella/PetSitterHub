@@ -1,5 +1,10 @@
 const pool = require("../db/pool");
-const { calculateTotalPrice, hasInvalidDates, isSitterAvailable } = require("../services/bookingService");
+const {
+  calculateTotalPrice,
+  findCompatibleSitterService,
+  hasInvalidDates,
+  isSitterAvailable
+} = require("../services/bookingService");
 const { createNotification } = require("../services/notificationService");
 
 function getPagination(query) {
@@ -158,25 +163,14 @@ async function createBooking(req, res, next) {
       });
     }
 
-    const serviceResult = await pool.query(
-      `select p.species as pet_type, ss.price, s.price_unit
-       from pets p
-       join sitter_services ss on ss.pet_type = p.species
-       join services s on s.id = ss.service_id
-       where p.id = $1
-         and p.owner_id = $2
-         and ss.sitter_id = $3
-         and ss.service_id = $4`,
-      [petId, req.user.id, sitterId, serviceId]
-    );
+    const service = await findCompatibleSitterService(req.user.id, petId, sitterId, serviceId);
 
-    if (serviceResult.rows.length === 0) {
+    if (!service) {
       return res.status(400).json({
         error: "Animale, sitter o servizio non compatibili"
       });
     }
 
-    const service = serviceResult.rows[0];
     const totalPrice = calculateTotalPrice(Number(service.price), service.price_unit, startsAt, endsAt);
     const available = await isSitterAvailable(sitterId, startsAt, endsAt);
 
@@ -235,25 +229,14 @@ async function quoteBooking(req, res, next) {
       });
     }
 
-    const serviceResult = await pool.query(
-      `select p.species as pet_type, ss.price, s.name as service_name, s.price_unit
-       from pets p
-       join sitter_services ss on ss.pet_type = p.species
-       join services s on s.id = ss.service_id
-       where p.id = $1
-         and p.owner_id = $2
-         and ss.sitter_id = $3
-         and ss.service_id = $4`,
-      [petId, req.user.id, sitterId, serviceId]
-    );
+    const service = await findCompatibleSitterService(req.user.id, petId, sitterId, serviceId);
 
-    if (serviceResult.rows.length === 0) {
+    if (!service) {
       return res.status(400).json({
         error: "Animale, sitter o servizio non compatibili"
       });
     }
 
-    const service = serviceResult.rows[0];
     const totalPrice = calculateTotalPrice(Number(service.price), service.price_unit, startsAt, endsAt);
 
     return res.json({

@@ -108,8 +108,25 @@ async function isSitterAvailable(sitterId, startsAt, endsAt) {
   return matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt);
 }
 
+async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) {
+  const result = await pool.query(
+    `select p.species as pet_type, ss.price, s.name as service_name, s.price_unit
+     from pets p
+     join sitter_services ss on ss.pet_type = p.species
+     join services s on s.id = ss.service_id
+     where p.id = $1
+       and p.owner_id = $2
+       and ss.sitter_id = $3
+       and ss.service_id = $4`,
+    [petId, ownerId, sitterId, serviceId]
+  );
+
+  return result.rows[0] || null;
+}
+
 module.exports = {
   calculateTotalPrice,
+  findCompatibleSitterService,
   hasInvalidDates,
   isSitterAvailable,
   matchesSitterAvailabilitySchedule
