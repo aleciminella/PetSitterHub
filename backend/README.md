@@ -29,6 +29,7 @@ Esempio:
 PORT=3000
 DATABASE_URL=postgres://utente:password@localhost:5432/petsitterhub
 JWT_SECRET=dev-secret
+FRONTEND_ORIGIN=http://localhost:5500
 ```
 
 ## Avvio
