@@ -360,3 +360,51 @@ main {
 #sitterBookingsMessage {     
     margin-bottom: 1rem; 
 } 
+
+.sitter-avatar-image {
+    background-position: center;
+    background-size: cover;
+    color: transparent;
+}
+
+.rating-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.sitter-pet-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.sitter-service-panel {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.sitter-service-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+}
+
+.payment-summary {
+    border: 1px solid #dce8e1;
+    border-radius: 8px;
+    background-color: #f7fbf8;
+    padding: 16px;
+}
+
+.review-item {
+    border-bottom: 1px solid #e5e5e5;
+    padding: 12px 0;
+}
+
+.review-item:last-child {
+    border-bottom: 0;
+}
