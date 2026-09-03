@@ -122,7 +122,7 @@ async function isSitterAvailable(sitterId, startsAt, endsAt) {
 
 async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) {
   const result = await pool.query(
-    `select p.species as pet_type, ss.price, s.name as service_name, s.price_unit
+    `select p.species as pet_type, ss.price, s.name as service_name, s.price_unit, s.availability_mode
      from pets p
      join sitter_services ss on ss.pet_type = p.species
      join services s on s.id = ss.service_id
@@ -134,6 +134,147 @@ async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) 
   );
 
   return result.rows[0] || null;
+}
+
+async function getServiceAvailabilityMode(serviceId) {
+  if (!serviceId) {
+    return "hourly_slot";
+  }
+
+  const result = await pool.query(
+    `select availability_mode
+     from services
+     where id = $1`,
+    [serviceId]
+  );
+
+  return result.rows[0] ? result.rows[0].availability_mode : "hourly_slot";
+}
+
+function atMinutes(date, minutes) {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    Math.floor(minutes / 60),
+    minutes % 60,
+    0,
+    0
+  );
+}
+
+function intervalsOverlap(startA, endA, startB, endB) {
+  return startA < endB && endA > startB;
+}
+
+async function loadScheduleAndAcceptedBookings(sitterId, rangeStart, rangeEnd) {
+  const startKey = toDateKey(rangeStart);
+  const endKey = toDateKey(rangeEnd);
+
+  const [weeklyResult, exceptionResult, bookingsResult] = await Promise.all([
+    pool.query(
+      `select weekday, is_available, starts_at, ends_at
+       from sitter_weekly_availability
+       where sitter_id = $1`,
+      [sitterId]
+    ),
+    pool.query(
+      `select starts_on, ends_on, is_available, starts_at, ends_at
+       from sitter_availability_exceptions
+       where sitter_id = $1
+         and starts_on <= $3::date
+         and ends_on >= $2::date`,
+      [sitterId, startKey, endKey]
+    ),
+    pool.query(
+      `select b.starts_at, b.ends_at, s.availability_mode
+       from bookings b
+       join services s on s.id = b.service_id
+       where b.sitter_id = $1
+         and b.status = any($4)
+         and b.starts_at < $3
+         and b.ends_at > $2`,
+      [sitterId, rangeStart, rangeEnd, ACTIVE_BOOKING_STATUSES]
+    )
+  ]);
+
+  return {
+    weeklyAvailability: weeklyResult.rows,
+    exceptions: exceptionResult.rows,
+    acceptedBookings: bookingsResult.rows.map((row) => ({
+      startsAt: new Date(row.starts_at),
+      endsAt: new Date(row.ends_at),
+      availabilityMode: row.availability_mode
+    }))
+  };
+}
+
+function slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, availabilityMode) {
+  const conflictModes = getConflictAvailabilityModes(availabilityMode);
+
+  return acceptedBookings.some((booking) => (
+    conflictModes.includes(booking.availabilityMode)
+    && intervalsOverlap(slotStart, slotEnd, booking.startsAt, booking.endsAt)
+  ));
+}
+
+async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMode) {
+  const start = new Date(rangeStart);
+  const end = new Date(rangeEnd);
+  const mode = availabilityMode || "hourly_slot";
+  const { weeklyAvailability, exceptions, acceptedBookings } = await loadScheduleAndAcceptedBookings(
+    sitterId,
+    start,
+    end
+  );
+
+  const days = [];
+
+  eachBookingDate(start, end).forEach((date) => {
+    const dateKey = toDateKey(date);
+    const availability = getAvailabilityForDate(dateKey, date.getDay(), weeklyAvailability, exceptions);
+
+    if (!availability || !availability.is_available) {
+      return;
+    }
+
+    const availableStart = toMinutes(availability.starts_at);
+    const availableEnd = toMinutes(availability.ends_at);
+    const slots = [];
+
+    if (mode === "daily_exclusive" || mode === "daily_non_exclusive") {
+      const slotStart = atMinutes(date, availableStart);
+      const slotEnd = atMinutes(date, availableEnd);
+
+      if (!slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
+        slots.push({
+          startsAt: slotStart.toISOString(),
+          endsAt: slotEnd.toISOString()
+        });
+      }
+    } else {
+      for (let minutes = availableStart; minutes + SLOT_MINUTES <= availableEnd; minutes += SLOT_MINUTES) {
+        const slotStart = atMinutes(date, minutes);
+        const slotEnd = atMinutes(date, minutes + SLOT_MINUTES);
+
+        if (!slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
+          slots.push({
+            startsAt: slotStart.toISOString(),
+            endsAt: slotEnd.toISOString()
+          });
+        }
+      }
+    }
+
+    if (slots.length > 0) {
+      days.push({
+        date: dateKey,
+        slots
+      });
+    }
+  });
+
+  return days;
 }
 
 function getConflictAvailabilityModes(availabilityMode) {
@@ -176,8 +317,10 @@ module.exports = {
   ACTIVE_BOOKING_STATUSES,
   calculateTotalPrice,
   findCompatibleSitterService,
+  getServiceAvailabilityMode,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
   isSitterAvailable,
+  listAvailableSlots,
   matchesSitterAvailabilitySchedule
 };
