@@ -24,27 +24,33 @@
     <main class="container my-5">
         <section class="page-heading mb-4">
             <h1>Dashboard proprietario</h1>
-            <p class="text-muted mb-0">Gestisci animali e prenotazioni.</p>
+            <p class="text-muted mb-0">Gestisci animali, prenotazioni, pagamenti e messaggi.</p>
         </section>
 
         <section class="dashboard-grid">
             <div class="dashboard-panel dashboard-panel-full">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <div>
-                        <h2 class="h4 mb-1">
-                            Notifiche <span id="ownerNotificationsBadge" class="badge text-bg-danger d-none"></span>
+                        <h2 class="h4 mb-1 position-relative">
+                            Notifiche <span id="ownerNotificationsBadge" class="nav-count-badge d-none">0</span>
                         </h2>
-                        <p class="text-muted mb-0">Ultimi aggiornamenti su prenotazioni, pagamenti, recensioni e messaggi.</p>
+                        <p class="text-muted mb-0">Aggiornamenti su richieste, pagamenti, recensioni e messaggi.</p>
                     </div>
-                    <button class="btn btn-outline-primary btn-sm" type="button" id="markAllNotificationsReadButton">
-                        Segna tutte come lette
-                    </button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-primary btn-sm d-none" type="button" id="markAllNotificationsReadButton">
+                            Segna tutte come lette
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm d-none" type="button" id="deleteAllNotificationsButton">
+                            Elimina tutte
+                        </button>
+                    </div>
                 </div>
                 <div id="ownerNotificationsList"></div>
                 <button class="btn btn-outline-primary d-none mt-3" type="button" id="loadMoreNotificationsButton">
                     Mostra altre notifiche
                 </button>
             </div>
+
             <div class="dashboard-panel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h4 mb-0">I miei animali</h2>
@@ -68,8 +74,8 @@
                             <option value="">Seleziona</option>
                             <option value="cane">Cane</option>
                             <option value="gatto">Gatto</option>
-                            <option value="uccello">Uccello</option>
                             <option value="roditore">Roditore</option>
+                            <option value="uccello">Uccello</option>
                             <option value="rettile">Rettile</option>
                         </select>
                     </div>
@@ -83,7 +89,9 @@
                     </div>
                     <div class="col-12 d-flex gap-2">
                         <button type="submit" class="btn btn-primary" id="savePetButton">Salva animale</button>
-                        <button type="button" class="btn btn-outline-secondary d-none" id="cancelEditPetButton">Annulla modifica</button>
+                        <button type="button" class="btn btn-outline-secondary d-none" id="cancelEditPetButton">
+                            Annulla modifica
+                        </button>
                     </div>
                 </form>
             </div>
@@ -92,20 +100,20 @@
                 <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
                     <div>
                         <h2 class="h4 mb-1">Prenotazioni</h2>
-                                    <p class="text-muted mb-0">Controlla richieste, prenotazioni future e storico.</p>
-                                </div>
-                                <select class="form-select booking-filter" id="bookingPeriod">
-                                    <option value="future">Future</option>
-                                    <option value="past">Passate</option>
-                                    <option value="all">Tutte</option>
-                                </select>
-                            </div>
-                            <div id="bookingsMessage" class="alert d-none" role="alert"></div>
-                            <div id="bookingsList"></div>
-                            <button class="btn btn-outline-primary d-none mt-3" type="button" id="loadMoreBookingsButton">
-                                Mostra altre prenotazioni
-                            </button>
-                        </div>
+                        <p class="text-muted mb-0">Controlla richieste, pagamenti, messaggi e storico.</p>
+                    </div>
+                    <select class="form-select booking-filter" id="bookingPeriod" aria-label="Filtro prenotazioni">
+                        <option value="future">Future</option>
+                        <option value="past">Passate</option>
+                        <option value="all">Tutte</option>
+                    </select>
+                </div>
+                <div id="bookingsMessage" class="alert d-none" role="alert"></div>
+                <div id="bookingsList"></div>
+                <button class="btn btn-outline-primary d-none mt-3" type="button" id="loadMoreBookingsButton">
+                    Mostra altre prenotazioni
+                </button>
+            </div>
         </section>
     </main>
 
