@@ -141,6 +141,69 @@ function renderRating(sitter) {
     `;
 }
 
+function selectedOwnerPet() {
+    if (!currentUserIsOwner()) {
+        return null;
+    }
+
+    return ownerPets.find(function (pet) {
+        return String(pet.id) === String($("#petType").val());
+    }) || null;
+}
+
+function ownerPetTypes() {
+    return uniqueValues(ownerPets.map((pet) => pet.species));
+}
+
+function selectedFilterPetType() {
+    const selectedPet = selectedOwnerPet();
+
+    if (selectedPet) {
+        return selectedPet.species;
+    }
+
+    if (currentUserIsOwner()) {
+        return "";
+    }
+
+    return $("#petType").val();
+}
+
+function serviceMatchesCurrentFilters(service) {
+    const selectedService = $("#service").val();
+    const petType = selectedFilterPetType();
+
+    if (selectedService && service.name !== selectedService) {
+        return false;
+    }
+
+    if (petType && service.pet_type !== petType) {
+        return false;
+    }
+
+    if (currentUserIsOwner() && !petType) {
+        return ownerPetTypes().includes(service.pet_type);
+    }
+
+    return true;
+}
+
+function visibleServicesForSitter(sitter) {
+    return (sitter.services || []).filter(serviceMatchesCurrentFilters);
+}
+
+function sitterMatchesCurrentOwnerPets(sitter) {
+    if (!currentUserIsOwner() || selectedFilterPetType()) {
+        return true;
+    }
+
+    const allowedPetTypes = ownerPetTypes();
+
+    return (sitter.services || []).some(function (service) {
+        return allowedPetTypes.includes(service.pet_type);
+    });
+}
+
 function groupServicesByPetType(services) {
     return (services || []).reduce(function (groups, service) {
         if (!groups[service.pet_type]) {
@@ -183,7 +246,7 @@ function renderServicePanel(sitter, petType, services, active) {
 }
 
 function renderSitterServices(sitter) {
-    const groups = groupServicesByPetType(sitter.services);
+    const groups = groupServicesByPetType(visibleServicesForSitter(sitter));
     const petTypes = Object.keys(groups);
 
     if (!petTypes.length) {
@@ -209,8 +272,8 @@ function renderSitterServices(sitter) {
 function renderSitters(sitters) {
     const minRating = Number($("#minRating").val() || 0);
     const filteredSitters = minRating
-        ? sitters.filter((sitter) => Number(sitter.average_rating || 0) >= minRating)
-        : sitters;
+        ? sitters.filter((sitter) => Number(sitter.average_rating || 0) >= minRating && sitterMatchesCurrentOwnerPets(sitter))
+        : sitters.filter(sitterMatchesCurrentOwnerPets);
 
     if (!filteredSitters.length) {
         $("#sittersList").html(`
@@ -261,6 +324,21 @@ function renderPetTypeOptions(availablePetTypes) {
     }
 }
 
+function renderOwnerPetOptions() {
+    const currentValue = $("#petType").val();
+    const options = ['<option value="">Tutti i miei animali</option>'];
+
+    ownerPets.forEach(function (pet) {
+        options.push(`<option value="${pet.id}">${pet.name} (${petTypeLabel(pet.species)})</option>`);
+    });
+
+    $("#petType").html(options.join(""));
+
+    if (ownerPets.some((pet) => String(pet.id) === String(currentValue))) {
+        $("#petType").val(currentValue);
+    }
+}
+
 function renderServiceOptions(availableServices) {
     const currentValue = $("#service").val();
     const options = ['<option value="">Tutti i servizi</option>'];
@@ -277,6 +355,11 @@ function renderServiceOptions(availableServices) {
 }
 
 function syncFilterOptions(changedFilter) {
+    if (currentUserIsOwner()) {
+        syncOwnerFilterOptions();
+        return;
+    }
+
     const selectedPetType = $("#petType").val();
     const selectedService = $("#service").val();
     let petTypes = [];
@@ -305,16 +388,25 @@ function syncFilterOptions(changedFilter) {
     }
 }
 
+function syncOwnerFilterOptions() {
+    const selectedPet = selectedOwnerPet();
+    const selectedPetType = selectedPet ? selectedPet.species : "";
+    const allowedPetTypes = selectedPetType ? [selectedPetType] : ownerPetTypes();
+    const availableServices = allServices.filter(function (service) {
+        return (service.pet_types || []).some((petType) => allowedPetTypes.includes(petType));
+    });
+
+    renderOwnerPetOptions();
+    renderServiceOptions(availableServices);
+}
+
 function currentFilters() {
     const filters = {
         city: $("#city").val(),
         service: $("#service").val()
     };
 
-    const selectedPet = currentUserIsOwner()
-        ? ownerPets.find((pet) => String(pet.id) === String($("#petType").val()))
-        : null;
-    const petType = selectedPet ? selectedPet.species : $("#petType").val();
+    const petType = selectedFilterPetType();
 
     if (petType) {
         filters.petType = petType;
@@ -347,12 +439,7 @@ function loadOwnerPets() {
             return;
         }
 
-        const options = ['<option value="">Tutti i miei animali</option>'];
-        ownerPets.forEach(function (pet) {
-            options.push(`<option value="${pet.id}">${pet.name} (${petTypeLabel(pet.species)})</option>`);
-        });
-
-        $("#petType").html(options.join(""));
+        syncOwnerFilterOptions();
         loadSitters(currentFilters());
     }).fail(function () {
         ownerPets = [];
@@ -723,15 +810,13 @@ $(document).ready(function () {
     });
 
     $("#petType").on("change", function () {
-        if (!currentUserIsOwner()) {
-            syncFilterOptions("pet");
-        }
+        syncFilterOptions("pet");
+        loadSitters(currentFilters());
     });
 
     $("#service").on("change", function () {
-        if (!currentUserIsOwner()) {
-            syncFilterOptions("service");
-        }
+        syncFilterOptions("service");
+        loadSitters(currentFilters());
     });
 
     $("#minRating").on("change", function () {
