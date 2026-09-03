@@ -48,12 +48,45 @@ curl -X POST http://localhost:4000/api/pets \
 
 Regole rapide:
 
-- `GET` legge dati.
+- `GET` legge dati e di solito non ha body.
 - `POST` crea dati.
 - `PUT` modifica completamente una risorsa.
 - `PATCH` modifica solo una parte o cambia stato.
-- `DELETE` elimina dati.
-- Gli endpoint con `Authorization: Bearer token` richiedono un utente autenticato con il ruolo corretto.
+- `DELETE` elimina dati e di solito non ha body.
+- Quando una richiesta ha un Body JSON, nel comando `curl` bisogna aggiungere sempre `-H "Content-Type: application/json"` e passare il body con `-d '...'`.
+- Gli endpoint con `Authorization: Bearer token` richiedono un utente autenticato.
+- Il ruolo non si scrive nel comando: dipende dall'account usato per fare login. Un token proprietario funziona sulle API proprietario, un token sitter sulle API sitter, un token admin sulle API admin.
+
+Esempi completi per metodo:
+
+```bash
+# GET pubblico
+curl http://localhost:4000/api/services
+
+# GET protetto
+curl http://localhost:4000/api/pets \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
+
+# POST con body JSON
+curl -X POST http://localhost:4000/api/pets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI" \
+  -d '{"name":"Test","species":"cane","breed":"Meticcio","age":3,"notes":"Prova API"}'
+
+# PUT con body JSON
+curl -X PUT http://localhost:4000/api/pets/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI" \
+  -d '{"name":"Luna","species":"cane","breed":"Labrador","age":5,"notes":"Dati aggiornati"}'
+
+# PATCH senza body, usato per cambiare stato
+curl -X PATCH http://localhost:4000/api/bookings/1/accept \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
+
+# DELETE protetto
+curl -X DELETE http://localhost:4000/api/pets/1 \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
+```
 
 Account demo utili:
 
