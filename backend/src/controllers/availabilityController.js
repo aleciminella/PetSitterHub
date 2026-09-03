@@ -6,25 +6,28 @@ const {
   matchesSitterAvailabilitySchedule
 } = require("../services/bookingService");
 
-const MAX_SLOT_RANGE_DAYS = 31;
+const MAX_SLOT_RANGE_DAYS = 31; // Tetto massimo: non si possono chiedere gli orari liberi per più di 31 giorni alla volta 
 
-function parseDateParam(value) {
+function parseDateParam(value) { // Prende una data scritta come testo e la trasforma in un vero oggetto data che JavaScript può manipolare
   if (!value) {
     return null;
   }
 
   const date = new Date(`${value}T00:00:00`);
 
-  if (Number.isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) { // Se un utente scrive nell'indirizzo una data finta che non esiste (come "2025-02-31" o "ciao"), JavaScript non riesce a calcolare i millisecondi (getTime() restituisce NaN = Not a Number). La funzione se ne accorge e restituisce null (data non valida).
     return null;
   }
 
   return date;
 }
 
-function endOfDay(date) {
+function endOfDay(date) { // Questa funzione prende il giorno e sposta l'orologio all'ultimo istante della giornata (quando vengono chiesti ad esempio gli orari liberi "fino al 15 Marzo", non intendi fino alla mezzanotte tra il 14 e il 15, ma intendi fino alla fine del 15 Marzo)
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 }
+
+
+
 
 async function checkSitterAvailability(req, res, next) {
   try {
@@ -37,8 +40,8 @@ async function checkSitterAvailability(req, res, next) {
       });
     }
 
-    const availabilityMode = await getServiceAvailabilityMode(serviceId);
-    const matchesSchedule = await matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt);
+    const availabilityMode = await getServiceAvailabilityMode(serviceId); 
+    const matchesSchedule = await matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt); // controlla che il sitter sia disponibile nelle date e ritorna true o false
     const hasOverlap = await hasAcceptedBookingOverlap({
       id: 0,
       sitter_id: sitterId,

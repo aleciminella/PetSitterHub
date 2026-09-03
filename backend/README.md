@@ -26,30 +26,57 @@ Aggiornare `.env` con i dati del proprio database PostgreSQL.
 Esempio:
 
 ```env
-PORT=3000
+PORT=4000
 DATABASE_URL=postgres://utente:password@localhost:5432/petsitterhub
 JWT_SECRET=dev-secret
 FRONTEND_ORIGIN=http://localhost:5500
 ```
 
-## Avvio
+## Avvio manuale completo
+
+L'avvio manuale richiede PostgreSQL attivo sul computer e il database locale `petsitterhub` già creato.
+
+Caricare schema e dati demo dal backend:
+
+```bash
+psql -d petsitterhub -f ../database/schema.sql
+psql -d petsitterhub -f ../database/seed.sql
+```
+
+Avviare il backend:
 
 ```bash
 npm start
 ```
+
+Il frontend statico va avviato separatamente dalla cartella `frontend` sulla porta `5500`.
+
+```bash
+cd ../frontend
+python3 -m http.server 5500
+```
+
+Aprire poi:
+
+```text
+http://localhost:5500/index.html
+```
+
+Nota: con Docker non viene usato il PostgreSQL locale, ma il database del container. Per l'avvio completo con Docker consultare il README principale.
+
 
 ## Verifiche
 
 Controllo server:
 
 ```text
-GET http://localhost:3000/api/health
+GET http://localhost:4000/api/health
 ```
 
 Controllo connessione database:
 
 ```text
-GET http://localhost:3000/api/health/db
+GET http://localhost:4000/api/health/db
 ```
 
 ## Autenticazione
@@ -57,7 +84,7 @@ GET http://localhost:3000/api/health/db
 Registrazione utente:
 
 ```text
-POST http://localhost:3000/api/auth/register
+POST http://localhost:4000/api/auth/register
 ```
 
 Body JSON:
@@ -95,7 +122,7 @@ La risposta contiene anche un token da usare nelle API protette.
 Login utente:
 
 ```text
-POST http://localhost:3000/api/auth/login
+POST http://localhost:4000/api/auth/login
 ```
 
 Body JSON:
@@ -122,7 +149,7 @@ La risposta contiene anche un token da usare nelle API protette.
 Elenco servizi disponibili:
 
 ```text
-GET http://localhost:3000/api/services
+GET http://localhost:4000/api/services
 ```
 
 Ogni servizio include descrizione, tipo tariffa, modalità disponibilità e animali supportati.
@@ -132,7 +159,7 @@ Ogni servizio include descrizione, tipo tariffa, modalità disponibilità e anim
 Elenco animali del proprietario autenticato:
 
 ```text
-GET http://localhost:3000/api/pets
+GET http://localhost:4000/api/pets
 Authorization: Bearer token
 ```
 
@@ -147,7 +174,7 @@ Risposte principali:
 Aggiunta animale:
 
 ```text
-POST http://localhost:3000/api/pets
+POST http://localhost:4000/api/pets
 Authorization: Bearer token
 ```
 
@@ -176,7 +203,7 @@ Risposte principali:
 Modifica animale:
 
 ```text
-PUT http://localhost:3000/api/pets/:id
+PUT http://localhost:4000/api/pets/:id
 Authorization: Bearer token
 ```
 
@@ -206,7 +233,7 @@ Risposte principali:
 Eliminazione animale:
 
 ```text
-DELETE http://localhost:3000/api/pets/:id
+DELETE http://localhost:4000/api/pets/:id
 Authorization: Bearer token
 ```
 
@@ -241,7 +268,7 @@ Risposta:
 Elenco prenotazioni:
 
 ```text
-GET http://localhost:3000/api/bookings
+GET http://localhost:4000/api/bookings
 Authorization: Bearer token
 ```
 
@@ -251,10 +278,10 @@ Ogni prenotazione include anche i dati del pagamento, se già registrato.
 Filtri disponibili:
 
 ```text
-GET http://localhost:3000/api/bookings?period=future
-GET http://localhost:3000/api/bookings?period=past
-GET http://localhost:3000/api/bookings?period=all
-GET http://localhost:3000/api/bookings?limit=5&offset=0
+GET http://localhost:4000/api/bookings?period=future
+GET http://localhost:4000/api/bookings?period=past
+GET http://localhost:4000/api/bookings?period=all
+GET http://localhost:4000/api/bookings?limit=5&offset=0
 ```
 
 `period` permette di filtrare prenotazioni future, passate o tutte. `limit` e `offset` servono per mostrare le prenotazioni a blocchi, ad esempio 5 alla volta.
@@ -270,7 +297,7 @@ Risposte principali:
 Creazione richiesta prenotazione:
 
 ```text
-POST http://localhost:3000/api/bookings
+POST http://localhost:4000/api/bookings
 Authorization: Bearer token
 ```
 
@@ -303,12 +330,12 @@ Il prezzo totale viene calcolato in base alla tariffa configurata per sitter, se
 Proprietario e sitter possono leggere e inviare messaggi solo sulle prenotazioni in cui sono coinvolti.
 
 ```text
-GET http://localhost:3000/api/bookings/:bookingId/messages
+GET http://localhost:4000/api/bookings/:bookingId/messages
 Authorization: Bearer token
 ```
 
 ```text
-POST http://localhost:3000/api/bookings/:bookingId/messages
+POST http://localhost:4000/api/bookings/:bookingId/messages
 Authorization: Bearer token
 Content-Type: application/json
 ```
@@ -336,13 +363,13 @@ Risposte principali:
 Le recensioni pubbliche di un sitter sono consultabili senza login.
 
 ```text
-GET http://localhost:3000/api/sitters/:sitterId/reviews
+GET http://localhost:4000/api/sitters/:sitterId/reviews
 ```
 
 Il proprietario può recensire una prenotazione solo quando è completata.
 
 ```text
-POST http://localhost:3000/api/bookings/:bookingId/reviews
+POST http://localhost:4000/api/bookings/:bookingId/reviews
 Authorization: Bearer token_owner
 Content-Type: application/json
 ```
@@ -372,7 +399,7 @@ Risposte principali:
 Il proprietario può registrare un pagamento demo solo dopo che il sitter ha accettato la richiesta.
 
 ```text
-POST http://localhost:3000/api/bookings/:bookingId/payments
+POST http://localhost:4000/api/bookings/:bookingId/payments
 Authorization: Bearer token_owner
 Content-Type: application/json
 ```
@@ -397,7 +424,7 @@ Con `demo_card` il pagamento viene registrato come pagato. Con `bank_transfer` i
 Conferma bonifico da parte del sitter:
 
 ```text
-PATCH http://localhost:3000/api/payments/:id/confirm-bank-transfer
+PATCH http://localhost:4000/api/payments/:id/confirm-bank-transfer
 Authorization: Bearer token_sitter
 ```
 
@@ -417,15 +444,15 @@ Risposte principali:
 Elenco sitter:
 
 ```text
-GET http://localhost:3000/api/sitters
+GET http://localhost:4000/api/sitters
 ```
 
 Filtri disponibili:
 
 ```text
-GET http://localhost:3000/api/sitters?city=Roma
-GET http://localhost:3000/api/sitters?service=Passeggiata
-GET http://localhost:3000/api/sitters?petType=cane
+GET http://localhost:4000/api/sitters?city=Roma
+GET http://localhost:4000/api/sitters?service=Passeggiata
+GET http://localhost:4000/api/sitters?petType=cane
 ```
 
 Risposta:
@@ -455,47 +482,47 @@ Risposta:
 
 ## Test manuali catalogo
 
-Se nel file `.env` viene usata una porta diversa da `3000`, sostituire la porta negli esempi.
+Se nel file `.env` viene usata una porta diversa da `4000`, sostituire la porta negli esempi.
 
 Servizi:
 
 ```bash
-curl http://localhost:3000/api/services
+curl http://localhost:4000/api/services
 ```
 
 Elenco sitter:
 
 ```bash
-curl http://localhost:3000/api/sitters
+curl http://localhost:4000/api/sitters
 ```
 
 Filtro per città:
 
 ```bash
-curl "http://localhost:3000/api/sitters?city=Roma"
+curl "http://localhost:4000/api/sitters?city=Roma"
 ```
 
 Filtro per servizio:
 
 ```bash
-curl "http://localhost:3000/api/sitters?service=Passeggiata"
+curl "http://localhost:4000/api/sitters?service=Passeggiata"
 ```
 
 Filtro per animale:
 
 ```bash
-curl "http://localhost:3000/api/sitters?petType=cane"
+curl "http://localhost:4000/api/sitters?petType=cane"
 ```
 
 Profilo personale sitter:
 
 ```text
-GET http://localhost:3000/api/sitters/me
+GET http://localhost:4000/api/sitters/me
 Authorization: Bearer token_sitter
 ```
 
 ```text
-PUT http://localhost:3000/api/sitters/me
+PUT http://localhost:4000/api/sitters/me
 Authorization: Bearer token_sitter
 Content-Type: application/json
 ```
@@ -521,12 +548,12 @@ Risposte principali:
 Animali accettati dal sitter:
 
 ```text
-GET http://localhost:3000/api/sitters/me/pet-types
+GET http://localhost:4000/api/sitters/me/pet-types
 Authorization: Bearer token_sitter
 ```
 
 ```text
-PUT http://localhost:3000/api/sitters/me/pet-types
+PUT http://localhost:4000/api/sitters/me/pet-types
 Authorization: Bearer token_sitter
 Content-Type: application/json
 ```
@@ -544,14 +571,14 @@ Quando un animale viene rimosso dagli animali accettati, vengono rimossi anche i
 Servizi configurabili dal sitter:
 
 ```text
-GET http://localhost:3000/api/sitters/me/services
+GET http://localhost:4000/api/sitters/me/services
 Authorization: Bearer token_sitter
 ```
 
 La risposta contiene solo i servizi compatibili con gli animali accettati dal sitter. Ogni riga indica servizio, animale, prezzo configurato e se il servizio è attivo.
 
 ```text
-PUT http://localhost:3000/api/sitters/me/services
+PUT http://localhost:4000/api/sitters/me/services
 Authorization: Bearer token_sitter
 Content-Type: application/json
 ```
@@ -583,18 +610,18 @@ luca.sitter@example.com / password123
 Il sitter può accettare o rifiutare una richiesta ancora in attesa. Una richiesta può essere accettata solo se il sitter non ha già un'altra prenotazione accettata nello stesso intervallo.
 
 ```http
-PATCH http://localhost:3000/api/bookings/:id/accept
+PATCH http://localhost:4000/api/bookings/:id/accept
 Authorization: Bearer <token_sitter>
 ```
 
 ```http
-PATCH http://localhost:3000/api/bookings/:id/reject
+PATCH http://localhost:4000/api/bookings/:id/reject
 Authorization: Bearer <token_sitter>
 ```
 
 Il proprietario può annullare una propria prenotazione se non è già chiusa.
 
 ```http
-PATCH http://localhost:3000/api/bookings/:id/cancel
+PATCH http://localhost:4000/api/bookings/:id/cancel
 Authorization: Bearer <token_owner>
 ```
