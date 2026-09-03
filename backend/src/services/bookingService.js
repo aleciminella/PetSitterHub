@@ -1,24 +1,30 @@
 const pool = require("../db/pool");
 const SLOT_MINUTES = 60;
-const ACTIVE_BOOKING_STATUSES = ["accepted"];
+const ACTIVE_BOOKING_STATUSES = ["accepted"]; // solo le prenotazioni con stato accepted occupano il calendario
 
-function calculateTotalPrice(price, priceUnit, startsAt, endsAt) {
+
+
+
+function calculateTotalPrice(price, priceUnit, startsAt, endsAt) { // Calcola quanto deve pagare il proprietario
   const start = new Date(startsAt);
   const end = new Date(endsAt);
-  const durationMs = end.getTime() - start.getTime();
+  const durationMs = end.getTime() - start.getTime(); // Prende la differenza di tempo tra inizio e fine
 
-  if (priceUnit === "hourly") {
-    const hours = Math.max(1, Math.ceil(durationMs / (1000 * 60 * 60)));
+  if (priceUnit === "hourly") { // Se la tarrifa è ad ore trasforma in ore e moltiplica per il prezzo orario
+    const hours = Math.max(1, Math.ceil(durationMs / (1000 * 60 * 60))); // Math.max(1, ...) garantisce che si paghi sempre almeno 1 ora minima.
     return price * hours;
   }
 
-  if (priceUnit === "daily") {
+  if (priceUnit === "daily") { // Se la tarrifa è giornaliera trasforma in giorni moltiplicando per la tariffa
     const days = Math.max(1, Math.ceil(durationMs / (1000 * 60 * 60 * 24)));
     return price * days;
   }
 
   return price;
 }
+
+
+
 
 function hasInvalidDates(startsAt, endsAt) {
   const start = new Date(startsAt);
@@ -31,13 +37,20 @@ function hasInvalidDates(startsAt, endsAt) {
     || !hasValidSlot(end);
 }
 
-function hasValidSlot(date) {
+
+
+
+function hasValidSlot(date) { // controlla che le prenotazioni non abbiano orari strani ma devono essere ore tonde spaccate
   return date.getSeconds() === 0
     && date.getMilliseconds() === 0
     && date.getMinutes() % SLOT_MINUTES === 0;
 }
 
-function toDateKey(date) {
+
+
+
+
+function toDateKey(date) { // Prende una data e la trasforma nella stringa pulita YYYY-MM-DD
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -45,14 +58,20 @@ function toDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
-function toMinutes(value) {
+
+
+
+function toMinutes(value) { // Prende un orario come "14:30" e lo trasforma in minuti totali dall'inizio della giornata: (14 * 60) + 30 = 870 minuti
   const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
 
   return hours * 60 + minutes;
 }
 
-function getAvailabilityForDate(dateKey, weekday, weeklyAvailability, exceptions) {
-  const exception = exceptions.find((item) => {
+
+
+
+function getAvailabilityForDate(dateKey, weekday, weeklyAvailability, exceptions) { // funzione che decide quali orari applicare in una data specifica
+  const exception = exceptions.find((item) => {  // Se la data è speciale restituisce quella
     const startsOn = typeof item.starts_on === "string" ? item.starts_on : toDateKey(item.starts_on);
     const endsOn = typeof item.ends_on === "string" ? item.ends_on : toDateKey(item.ends_on);
 
@@ -63,10 +82,14 @@ function getAvailabilityForDate(dateKey, weekday, weeklyAvailability, exceptions
     return exception;
   }
 
-  return weeklyAvailability.find((item) => item.weekday === weekday);
+  return weeklyAvailability.find((item) => item.weekday === weekday); // se non trova nessuna eccezione, cerca nella tabella degli orari settimanali normali 
 }
 
-function eachBookingDate(startsAt, endsAt) {
+
+
+
+
+function eachBookingDate(startsAt, endsAt) { // Prende una data di inizio e una di fine e con un ciclo while crea un array con tutti i singoli giorni intermedi
   const dates = [];
   const current = new Date(startsAt.getFullYear(), startsAt.getMonth(), startsAt.getDate());
   const last = new Date(endsAt.getFullYear(), endsAt.getMonth(), endsAt.getDate());
@@ -79,18 +102,23 @@ function eachBookingDate(startsAt, endsAt) {
   return dates;
 }
 
-async function matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt) {
+
+
+
+
+
+async function matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt) { // funzione che prende dal database sia gli orari settimanali sia i giorni speciali nel periodo richiesto e controlla che il sitter sia disponibile
   const start = new Date(startsAt);
   const end = new Date(endsAt);
 
-  const weeklyResult = await pool.query(
+  const weeklyResult = await pool.query( // orari standard del sitter
     `select weekday, is_available, starts_at, ends_at
      from sitter_weekly_availability
      where sitter_id = $1`,
     [sitterId]
   );
 
-  const exceptionResult = await pool.query(
+  const exceptionResult = await pool.query( // date speciali del sitter
     `select starts_on, ends_on, is_available, starts_at, ends_at
      from sitter_availability_exceptions
      where sitter_id = $1
@@ -99,27 +127,34 @@ async function matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt) {
     [sitterId, toDateKey(start), toDateKey(end)]
   );
 
-  return eachBookingDate(start, end).every((date) => {
+  return eachBookingDate(start, end).every((date) => { // crea un array con i giorni intermedi
     const dateKey = toDateKey(date);
-    const availability = getAvailabilityForDate(dateKey, date.getDay(), weeklyResult.rows, exceptionResult.rows);
+    const availability = getAvailabilityForDate(dateKey, date.getDay(), weeklyResult.rows, exceptionResult.rows); // controlla per ogni giorno dell'array l'orario
 
-    if (!availability || !availability.is_available) {
+    if (!availability || !availability.is_available) { // se solo un giorno non è disponibile restituisce false
       return false;
     }
 
-    const availableStart = toMinutes(availability.starts_at);
+    const availableStart = toMinutes(availability.starts_at); // trasforma in minuti dall'inizio della giornata l'orario di apertura
     const availableEnd = toMinutes(availability.ends_at);
-    const requestedStart = dateKey === toDateKey(start) ? start.getHours() * 60 + start.getMinutes() : availableStart;
+    const requestedStart = dateKey === toDateKey(start) ? start.getHours() * 60 + start.getMinutes() : availableStart; // se è il primo giorno prendi orario richiesto altrimenti quello di apertura
     const requestedEnd = dateKey === toDateKey(end) ? end.getHours() * 60 + end.getMinutes() : availableEnd;
 
-    return requestedStart >= availableStart && requestedEnd <= availableEnd;
+    return requestedStart >= availableStart && requestedEnd <= availableEnd; // verifica che se l'orario richiesto cade dentro l'rario di lavoro
   });
 }
+
+
 
 async function isSitterAvailable(sitterId, startsAt, endsAt) {
   return matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt);
 }
 
+
+
+
+
+// Verifica la compatibilità prima di prenotare. Controlla che il sitter offra quel servizio per quella specifica specie di animale
 async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) {
   const result = await pool.query(
     `select p.species as pet_type, ss.price, s.name as service_name, s.price_unit, s.availability_mode
@@ -133,8 +168,11 @@ async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) 
     [petId, ownerId, sitterId, serviceId]
   );
 
-  return result.rows[0] || null;
+  return result.rows[0] || null; // Se compatibile, restituisce il prezzo del sitter e la modalità del servizio per calcolare il totale, altrimenti restituisce null 
 }
+
+
+
 
 async function getServiceAvailabilityMode(serviceId) {
   if (!serviceId) {
@@ -151,6 +189,9 @@ async function getServiceAvailabilityMode(serviceId) {
   return result.rows[0] ? result.rows[0].availability_mode : "hourly_slot";
 }
 
+
+
+
 function atMinutes(date, minutes) {
   return new Date(
     date.getFullYear(),
@@ -163,9 +204,15 @@ function atMinutes(date, minutes) {
   );
 }
 
+
+
+
 function intervalsOverlap(startA, endA, startB, endB) {
   return startA < endB && endA > startB;
 }
+
+
+
 
 async function loadScheduleAndAcceptedBookings(sitterId, rangeStart, rangeEnd) {
   const startKey = toDateKey(rangeStart);
@@ -209,6 +256,8 @@ async function loadScheduleAndAcceptedBookings(sitterId, rangeStart, rangeEnd) {
   };
 }
 
+
+
 function slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, availabilityMode) {
   const conflictModes = getConflictAvailabilityModes(availabilityMode);
 
@@ -217,6 +266,8 @@ function slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, availab
     && intervalsOverlap(slotStart, slotEnd, booking.startsAt, booking.endsAt)
   ));
 }
+
+
 
 async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMode) {
   const start = new Date(rangeStart);
@@ -277,6 +328,8 @@ async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMo
   return days;
 }
 
+
+
 function getConflictAvailabilityModes(availabilityMode) {
   const conflictModes = {
     daily_exclusive: ["hourly_slot", "fixed_slot", "daily_exclusive", "daily_non_exclusive"],
@@ -287,6 +340,9 @@ function getConflictAvailabilityModes(availabilityMode) {
 
   return conflictModes[availabilityMode] || conflictModes.hourly_slot;
 }
+
+
+
 
 async function hasAcceptedBookingOverlap(booking) {
   const result = await pool.query(
@@ -312,6 +368,9 @@ async function hasAcceptedBookingOverlap(booking) {
 
   return result.rows.length > 0;
 }
+
+
+
 
 module.exports = {
   ACTIVE_BOOKING_STATUSES,
