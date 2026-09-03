@@ -195,6 +195,20 @@ async function createBooking(req, res, next) {
       });
     }
 
+    const hasOverlap = await hasAcceptedBookingOverlap({
+      id: 0,
+      sitter_id: sitterId,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      availability_mode: service.availability_mode
+    });
+
+    if (hasOverlap) {
+      return res.status(409).json({
+        error: "Sitter non disponibile nell'orario selezionato"
+      });
+    }
+
     const bookingResult = await pool.query(
       `insert into bookings (owner_id, sitter_id, service_id, pet_id, pet_type, starts_at, ends_at, total_price, notes)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -253,6 +267,20 @@ async function quoteBooking(req, res, next) {
     }
 
     const totalPrice = calculateTotalPrice(Number(service.price), service.price_unit, startsAt, endsAt);
+    const available = await isSitterAvailable(sitterId, startsAt, endsAt);
+    const hasOverlap = await hasAcceptedBookingOverlap({
+      id: 0,
+      sitter_id: sitterId,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      availability_mode: service.availability_mode
+    });
+
+    if (!available || hasOverlap) {
+      return res.status(409).json({
+        error: "Sitter non disponibile nell'orario selezionato"
+      });
+    }
 
     return res.json({
       quote: {
