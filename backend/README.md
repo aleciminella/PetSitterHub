@@ -2,68 +2,66 @@
 
 Backend Express per PetSitterHub.
 
-## Requisiti
+## Documentazione API
 
-- Node.js
-- PostgreSQL attivo in locale
+Le istruzioni complete per avviare il progetto con Docker o in locale sono nel README principale.
 
-## Installazione
+## Come provare le API
 
-Installare le dipendenze:
+Le API si possono provare da terminale con `curl`, dopo aver avviato backend e database.
 
-```bash
-npm install
-```
-
-Creare il file di configurazione locale:
+Gli endpoint pubblici non richiedono login. Esempio:
 
 ```bash
-cp .env.example .env
+curl http://localhost:4000/api/health
+curl http://localhost:4000/api/services
+curl http://localhost:4000/api/sitters
 ```
 
-Aggiornare `.env` con i dati del proprio database PostgreSQL.
+Gli endpoint protetti richiedono invece il token JWT restituito da login o registrazione.
 
-Esempio:
-
-```env
-PORT=4000
-DATABASE_URL=postgres://utente:password@localhost:5432/petsitterhub
-JWT_SECRET=dev-secret
-FRONTEND_ORIGIN=http://localhost:5500
-```
-
-## Avvio manuale completo
-
-L'avvio manuale richiede PostgreSQL attivo sul computer e il database locale `petsitterhub` già creato.
-
-Caricare schema e dati demo dal backend:
+Esempio di login:
 
 ```bash
-psql -d petsitterhub -f ../database/schema.sql
-psql -d petsitterhub -f ../database/seed.sql
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mario.rossi@example.com","password":"password123"}'
 ```
 
-Avviare il backend:
+La risposta contiene un campo `token`. Copiare quel valore e usarlo nell'header `Authorization`.
+
+Esempio di richiesta protetta:
 
 ```bash
-npm start
+curl http://localhost:4000/api/pets \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
 ```
 
-Il frontend statico va avviato separatamente dalla cartella `frontend` sulla porta `5500`.
+Esempio di richiesta protetta con body JSON:
 
 ```bash
-cd ../frontend
-python3 -m http.server 5500
+curl -X POST http://localhost:4000/api/pets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI" \
+  -d '{"name":"Test","species":"cane","breed":"Meticcio","age":3,"notes":"Prova API"}'
 ```
 
-Aprire poi:
+Regole rapide:
+
+- `GET` legge dati.
+- `POST` crea dati.
+- `PUT` modifica completamente una risorsa.
+- `PATCH` modifica solo una parte o cambia stato.
+- `DELETE` elimina dati.
+- Gli endpoint con `Authorization: Bearer token` richiedono un utente autenticato con il ruolo corretto.
+
+Account demo utili:
 
 ```text
-http://localhost:5500/index.html
+Proprietario: mario.rossi@example.com / password123
+Sitter: giulia.sitter@example.com / password123
+Admin: admin@example.com / password123
 ```
-
-Nota: con Docker non viene usato il PostgreSQL locale, ma il database del container. Per l'avvio completo con Docker consultare il README principale.
-
 
 ## Verifiche
 
