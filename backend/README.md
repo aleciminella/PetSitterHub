@@ -96,6 +96,19 @@ Sitter: giulia.sitter@example.com / password123
 Admin: admin@example.com / password123
 ```
 
+Nota: con Docker non viene usato il PostgreSQL locale, ma il database del container. Per l'avvio completo con Docker consultare il README principale.
+
+
+## Test automatici
+
+I test automatici backend usano il test runner integrato di Node.js e controllano alcune API reali: health check, servizi, sitter, login, permessi per ruolo e CRUD animali.
+
+Prima di lanciarli deve essere raggiungibile il database indicato in `backend/.env`.
+
+```bash
+cd backend
+npm test
+```
 ## Verifiche
 
 Controllo server:
