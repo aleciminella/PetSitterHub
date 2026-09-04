@@ -82,6 +82,52 @@ function getPriceUnitLabel(priceUnit) {
     return labels[priceUnit] || priceUnit;
 }
 
+function userInitials(user) {
+    return `${(user.first_name || "").charAt(0)}${(user.last_name || "").charAt(0)}`.toUpperCase() || "PS";
+}
+
+function updateProfileImagePreview(imageUrl) {
+    const preview = $("#profileImagePreview");
+    const user = getSavedUser() || {};
+
+    preview.text(userInitials(user));
+    preview.css("background-image", "none");
+
+    if (imageUrl) {
+        preview.text("");
+        preview.css("background-image", `url('${imageUrl}')`);
+    }
+}
+
+function resizeProfileImage(file) {
+    return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            const image = new Image();
+
+            image.onload = function () {
+                const maxSize = 480;
+                const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.round(image.width * scale);
+                canvas.height = Math.round(image.height * scale);
+
+                const context = canvas.getContext("2d");
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                resolve(canvas.toDataURL("image/jpeg", 0.78));
+            };
+
+            image.onerror = reject;
+            image.src = event.target.result;
+        };
+
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 function loadProfile() {
     $.ajax({
         url: `${API_BASE_URL}/sitters/me`,
@@ -90,6 +136,8 @@ function loadProfile() {
         success: function (response) {
             const profile = response.profile || {};
             $("#baseCity").val(profile.base_city || profile.city || "");
+            $("#profileImageUrl").val(profile.profile_image_url || "");
+            updateProfileImagePreview(profile.profile_image_url || "");
             $("#bio").val(profile.bio || "");
         },
         error: function () {
@@ -108,10 +156,12 @@ function saveProfile(event) {
         contentType: "application/json",
         data: JSON.stringify({
             baseCity: $("#baseCity").val(),
+            profileImageUrl: $("#profileImageUrl").val(),
             bio: $("#bio").val()
         }),
         success: function () {
             showMessage("#profileMessage", "success", "Profilo salvato correttamente.");
+            loadProfile();
         },
         error: function (xhr) {
             const message = xhr.responseJSON && xhr.responseJSON.error
@@ -492,6 +542,7 @@ function loadSitterMessages(bookingId) {
         headers: authHeaders(),
         success: function (response) {
             renderSitterMessages(list, response.messages || []);
+            $(`#sitter-message-count-${bookingId}`).addClass("d-none").text("0");
             loadNotifications();
         },
         error: function () {
@@ -519,6 +570,16 @@ function sendSitterMessage(bookingId, input) {
             showMessage("#sitterBookingsMessage", "danger", "Errore durante l'invio del messaggio.");
         }
     });
+}
+
+function renderUnreadMessagesBadge(booking) {
+    const unreadMessages = Number(booking.unread_messages || 0);
+
+    return `
+        <span class="message-count-badge ${unreadMessages > 0 ? "" : "d-none"}" id="sitter-message-count-${booking.id}">
+            ${unreadMessages}
+        </span>
+    `;
 }
 
 function updateBookingStatus(bookingId, action) {
@@ -567,9 +628,9 @@ function renderSitterBookings(bookings, append) {
                     <div>
                         <h3 class="h5 mb-2">${booking.service_name}</h3>
                         <p class="mb-1">Cliente: ${booking.owner_first_name} ${booking.owner_last_name}</p>
-                        <p class="mb-1">Animale: ${booking.pet_name} (${booking.pet_type})</p>
+                        <p class="mb-1">Animale: ${booking.pet_name} (${getPetTypeLabel(booking.pet_type)})</p>
                         <p class="mb-1">Dal ${formatDateTime(booking.starts_at)} al ${formatDateTime(booking.ends_at)}</p>
-                        <p class="mb-1">Totale: ${Number(booking.total_price).toFixed(2)} €</p>
+                        <p class="mb-1">Totale: ${formatMoney(booking.total_price)}</p>
                         <p class="mb-1">Pagamento: ${getPaymentStatusLabel(booking)}</p>
                         <p class="mb-0">${booking.notes || "Nessuna nota."}</p>
                     </div>
@@ -588,8 +649,9 @@ function renderSitterBookings(bookings, append) {
                     ${booking.payment_method === "bank_transfer" && booking.payment_status === "authorized" ? `
                         <button class="btn btn-outline-success btn-sm confirm-bank-transfer-button" type="button" data-payment-id="${booking.payment_id}">Conferma bonifico</button>
                     ` : ""}
-                    <button class="btn btn-outline-secondary btn-sm toggle-sitter-messages-button" type="button" data-id="${booking.id}">
+                    <button class="btn btn-outline-secondary btn-sm toggle-sitter-messages-button position-relative" type="button" data-id="${booking.id}">
                         Messaggi
+                        ${renderUnreadMessagesBadge(booking)}
                     </button>
                 </div>
                 <div class="booking-message-box d-none" id="sitter-messages-${booking.id}">
@@ -632,7 +694,10 @@ function loadSitterBookings(append = false) {
 }
 
 function formatDateTime(value) {
-    return new Date(value).toLocaleString("it-IT");
+    return new Date(value).toLocaleString("it-IT", {
+        dateStyle: "short",
+        timeStyle: "short"
+    });
 }
 
 function renderNotifications(notifications, append) {
@@ -646,7 +711,7 @@ function renderNotifications(notifications, append) {
     }
     const html = notifications.map(function (notification) {
         return `
-            <article class="booking-message-item ${notification.is_read ? "" : "border border-primary"}">
+            <article class="notification-item ${notification.is_read ? "" : "notification-unread"}">
                 <div class="d-flex justify-content-between gap-3">
                     <div>
                         <strong>${notification.title}</strong>
@@ -654,7 +719,7 @@ function renderNotifications(notifications, append) {
                         <small class="text-muted">${formatDateTime(notification.created_at)}</small>
                     </div>
                     <div class="d-flex gap-2 align-items-start">
-                        ${notification.is_read ? "" : `<button class="btn btn-outline-primary btn-sm read-notification-button" type="button" data-id="${notification.id}">Letta</button>`}
+                        ${notification.is_read ? "" : `<button class="btn btn-outline-primary btn-sm read-notification-button" type="button" data-id="${notification.id}">Segna come letta</button>`}
                         <button class="btn btn-outline-danger btn-sm delete-notification-button" type="button" data-id="${notification.id}">Elimina</button>
                     </div>
                 </div>
@@ -663,6 +728,15 @@ function renderNotifications(notifications, append) {
     }).join("");
     $("#sitterNotificationsList").append(html);
     $("#loadMoreNotificationsButton").toggleClass("d-none", !notificationsHasMore);
+}
+
+function updateNotificationsControls(unreadCount, totalCount) {
+    $("#sitterNotificationsBadge")
+        .toggleClass("d-none", unreadCount === 0)
+        .text(unreadCount);
+
+    $("#markAllNotificationsReadButton").toggleClass("d-none", unreadCount === 0);
+    $("#deleteAllNotificationsButton").toggleClass("d-none", totalCount === 0);
 }
 
 function loadNotifications(append = false) {
@@ -677,9 +751,7 @@ function loadNotifications(append = false) {
             const notifications = response.notifications || [];
             notificationsHasMore = notifications.length === NOTIFICATIONS_LIMIT;
             notificationsOffset += notifications.length;
-            $("#sitterNotificationsBadge")
-                .toggleClass("d-none", !response.unreadCount)
-                .text(response.unreadCount || "");
+            updateNotificationsControls(response.unreadCount || 0, notificationsOffset);
             renderNotifications(notifications, append);
         },
         error: function () {
@@ -721,88 +793,123 @@ function deleteNotification(notificationId) {
     });
 }
 
+function deleteAllNotifications() {
+    $.ajax({
+        url: `${API_BASE_URL}/notifications`,
+        method: "DELETE",
+        headers: authHeaders(),
+        success: function () {
+            loadNotifications();
+        }
+    });
+}
+
 $(document).ready(function () {
     if (!guardSitterDashboard()) {
         return;
     }
+
     loadProfile();
     loadPetTypes();
     loadServices();
     loadAvailability();
     loadNotifications();
-    loadSitterBookings();  
+    loadSitterBookings();
+
     $("#profileForm").on("submit", saveProfile);
     $("#petTypesForm").on("submit", savePetTypes);
     $("#servicesForm").on("submit", saveServices);
     $("#refreshServicesButton").on("click", loadServices);
     $("#refreshAvailabilityButton").on("click", loadAvailability);
 
-$("#weeklyAvailabilityList").on("change", ".weekly-available-input", function () {
-    const row = $(this).closest(".weekly-availability-row");
-    const enabled = $(this).is(":checked");
-    row.toggleClass("weekly-availability-row-disabled", !enabled);
-    row.find(".weekly-start-input, .weekly-end-input").prop("disabled", !enabled);
-});
-$("#weeklyAvailabilityForm").on("submit", saveWeeklyAvailability); 
-$("#exceptionForm").on("submit", addAvailabilityException);
+    $("#profileImageFile").on("change", function () {
+        const file = this.files && this.files[0];
 
-$("#availabilityExceptionsList").on("click", ".remove-exception-button", function () {
-    removeAvailabilityException(Number($(this).data("index")));
-});
+        if (!file) {
+            return;
+        }
 
-$("#exceptionType").on("change", function () {
-    const isSpecial = $(this).val() === "special";
-    $("#exceptionStartsAt, #exceptionEndsAt").prop("disabled", !isSpecial);
-});
+        resizeProfileImage(file).then(function (imageUrl) {
+            $("#profileImageUrl").val(imageUrl);
+            updateProfileImagePreview(imageUrl);
+        }).catch(function () {
+            showMessage("#profileMessage", "danger", "Impossibile caricare l'immagine selezionata.");
+        });
+    });
 
-$("#exceptionType").trigger("change");
-$("#loadMoreNotificationsButton").on("click", function () {
-    loadNotifications(true);
-});
+    $("#weeklyAvailabilityList").on("change", ".weekly-available-input", function () {
+        const row = $(this).closest(".weekly-availability-row");
+        const enabled = $(this).is(":checked");
+        row.toggleClass("weekly-availability-row-disabled", !enabled);
+        row.find(".weekly-start-input, .weekly-end-input").prop("disabled", !enabled);
+    });
 
-$("#markAllNotificationsReadButton").on("click", markAllNotificationsAsRead);
+    $("#weeklyAvailabilityForm").on("submit", saveWeeklyAvailability);
+    $("#exceptionForm").on("submit", addAvailabilityException);
 
-$("#sitterNotificationsList").on("click", ".read-notification-button", function () {
-    markNotificationAsRead($(this).data("id"));
-});
+    $("#availabilityExceptionsList").on("click", ".remove-exception-button", function () {
+        removeAvailabilityException(Number($(this).data("index")));
+    });
 
-$("#sitterNotificationsList").on("click", ".delete-notification-button", function () {
-    deleteNotification($(this).data("id"));
-});
-$("#sitterBookingPeriod").on("change", function () {
-    loadSitterBookings();
-});
+    $("#exceptionType").on("change", function () {
+        const isSpecial = $(this).val() === "special";
+        $("#exceptionStartsAt, #exceptionEndsAt").prop("disabled", !isSpecial);
+    });
 
-$("#loadMoreSitterBookingsButton").on("click", function () {
-    loadSitterBookings(true);
-});
-$("#sitterBookingsList").on("click", ".accept-booking-button", function () {
-    updateBookingStatus($(this).data("id"), "accept");
-});
+    $("#exceptionType").trigger("change");
 
-$("#sitterBookingsList").on("click", ".reject-booking-button", function () {
-    updateBookingStatus($(this).data("id"), "reject");
-});
+    $("#loadMoreNotificationsButton").on("click", function () {
+        loadNotifications(true);
+    });
 
-$("#sitterBookingsList").on("click", ".cancel-sitter-booking-button", function () {
-    updateBookingStatus($(this).data("id"), "cancel-by-sitter");
-});
+    $("#markAllNotificationsReadButton").on("click", markAllNotificationsAsRead);
+    $("#deleteAllNotificationsButton").on("click", deleteAllNotifications);
 
-$("#sitterBookingsList").on("click", ".confirm-bank-transfer-button", function () {
-    confirmBankTransfer($(this).data("payment-id"));
-});
-$("#sitterBookingsList").on("click", ".toggle-sitter-messages-button", function () {
-    const bookingId = $(this).data("id");
-    const box = $(`#sitter-messages-${bookingId}`);
-    box.toggleClass("d-none");
-    if (!box.hasClass("d-none")) {
-        loadSitterMessages(bookingId);
-    }
-});
+    $("#sitterNotificationsList").on("click", ".read-notification-button", function () {
+        markNotificationAsRead($(this).data("id"));
+    });
 
-$("#sitterBookingsList").on("click", ".send-sitter-message-button", function () {
-    const bookingId = $(this).data("id");
-    const input = $(`#sitter-messages-${bookingId}`).find(".message-input");
-    sendSitterMessage(bookingId, input);
-});
+    $("#sitterNotificationsList").on("click", ".delete-notification-button", function () {
+        deleteNotification($(this).data("id"));
+    });
+
+    $("#sitterBookingPeriod").on("change", function () {
+        loadSitterBookings();
+    });
+
+    $("#loadMoreSitterBookingsButton").on("click", function () {
+        loadSitterBookings(true);
+    });
+
+    $("#sitterBookingsList").on("click", ".accept-booking-button", function () {
+        updateBookingStatus($(this).data("id"), "accept");
+    });
+
+    $("#sitterBookingsList").on("click", ".reject-booking-button", function () {
+        updateBookingStatus($(this).data("id"), "reject");
+    });
+
+    $("#sitterBookingsList").on("click", ".cancel-sitter-booking-button", function () {
+        updateBookingStatus($(this).data("id"), "cancel-by-sitter");
+    });
+
+    $("#sitterBookingsList").on("click", ".confirm-bank-transfer-button", function () {
+        confirmBankTransfer($(this).data("payment-id"));
+    });
+
+    $("#sitterBookingsList").on("click", ".toggle-sitter-messages-button", function () {
+        const bookingId = $(this).data("id");
+        const box = $(`#sitter-messages-${bookingId}`);
+        box.toggleClass("d-none");
+
+        if (!box.hasClass("d-none")) {
+            loadSitterMessages(bookingId);
+        }
+    });
+
+    $("#sitterBookingsList").on("click", ".send-sitter-message-button", function () {
+        const bookingId = $(this).data("id");
+        const input = $(`#sitter-messages-${bookingId}`).find(".message-input");
+        sendSitterMessage(bookingId, input);
+    });
 });
