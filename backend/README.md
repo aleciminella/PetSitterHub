@@ -2,64 +2,98 @@
 
 Backend Express per PetSitterHub.
 
-## Requisiti
+## Documentazione API
 
-- Node.js
-- PostgreSQL attivo in locale
+Le istruzioni complete per avviare il progetto con Docker o in locale sono nel README principale.
 
-## Installazione
+## Come provare le API
 
-Installare le dipendenze:
+Le API si possono provare da terminale con `curl`, dopo aver avviato backend e database.
 
-```bash
-npm install
-```
-
-Creare il file di configurazione locale:
+Gli endpoint pubblici non richiedono login. Esempio:
 
 ```bash
-cp .env.example .env
+curl http://localhost:4000/api/health
+curl http://localhost:4000/api/services
+curl http://localhost:4000/api/sitters
 ```
 
-Aggiornare `.env` con i dati del proprio database PostgreSQL.
+Gli endpoint protetti richiedono invece il token JWT restituito da login o registrazione.
 
-Esempio:
-
-```env
-PORT=4000
-DATABASE_URL=postgres://utente:password@localhost:5432/petsitterhub
-JWT_SECRET=dev-secret
-FRONTEND_ORIGIN=http://localhost:5500
-```
-
-## Avvio manuale completo
-
-L'avvio manuale richiede PostgreSQL attivo sul computer e il database locale `petsitterhub` già creato.
-
-Caricare schema e dati demo dal backend:
+Esempio di login:
 
 ```bash
-psql -d petsitterhub -f ../database/schema.sql
-psql -d petsitterhub -f ../database/seed.sql
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mario.rossi@example.com","password":"password123"}'
 ```
 
-Avviare il backend:
+La risposta contiene un campo `token`. Copiare quel valore e usarlo nell'header `Authorization`.
+
+Esempio di richiesta protetta:
 
 ```bash
-npm start
+curl http://localhost:4000/api/pets \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
 ```
 
-Il frontend statico va avviato separatamente dalla cartella `frontend` sulla porta `5500`.
+Esempio di richiesta protetta con body JSON:
 
 ```bash
-cd ../frontend
-python3 -m http.server 5500
+curl -X POST http://localhost:4000/api/pets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI" \
+  -d '{"name":"Test","species":"cane","breed":"Meticcio","age":3,"notes":"Prova API"}'
 ```
 
-Aprire poi:
+Regole rapide:
+
+- `GET` legge dati e di solito non ha body.
+- `POST` crea dati.
+- `PUT` modifica completamente una risorsa.
+- `PATCH` modifica solo una parte o cambia stato.
+- `DELETE` elimina dati e di solito non ha body.
+- Quando una richiesta ha un Body JSON, nel comando `curl` bisogna aggiungere sempre `-H "Content-Type: application/json"` e passare il body con `-d '...'`.
+- Gli endpoint con `Authorization: Bearer token` richiedono un utente autenticato.
+- Il ruolo non si scrive nel comando: dipende dall'account usato per fare login. Un token proprietario funziona sulle API proprietario, un token sitter sulle API sitter, un token admin sulle API admin.
+
+Esempi completi per metodo:
+
+```bash
+# GET pubblico
+curl http://localhost:4000/api/services
+
+# GET protetto
+curl http://localhost:4000/api/pets \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
+
+# POST con body JSON
+curl -X POST http://localhost:4000/api/pets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI" \
+  -d '{"name":"Test","species":"cane","breed":"Meticcio","age":3,"notes":"Prova API"}'
+
+# PUT con body JSON
+curl -X PUT http://localhost:4000/api/pets/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI" \
+  -d '{"name":"Luna","species":"cane","breed":"Labrador","age":5,"notes":"Dati aggiornati"}'
+
+# PATCH senza body, usato per cambiare stato
+curl -X PATCH http://localhost:4000/api/bookings/1/accept \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
+
+# DELETE protetto
+curl -X DELETE http://localhost:4000/api/pets/1 \
+  -H "Authorization: Bearer INCOLLA_TOKEN_QUI"
+```
+
+Account demo utili:
 
 ```text
-http://localhost:5500/index.html
+Proprietario: mario.rossi@example.com / password123
+Sitter: giulia.sitter@example.com / password123
+Admin: admin@example.com / password123
 ```
 
 Nota: con Docker non viene usato il PostgreSQL locale, ma il database del container. Per l'avvio completo con Docker consultare il README principale.

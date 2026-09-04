@@ -15,23 +15,7 @@ cp .env.docker.example .env.docker
 docker compose up --build
 ```
 
-Indirizzi locali:
-
-```text
-Frontend: http://localhost:5500
-Backend:  http://localhost:4000/api/health
-Database: localhost:5433
-```
-
 Le porte e le credenziali locali si possono cambiare nel file `.env.docker`.
-
-Credenziali database Docker:
-
-```text
-Database: petsitterhub
-Utente: petsitterhub
-Password: petsitterhub
-```
 
 Al primo avvio Docker crea il database usando `database/schema.sql` e `database/seed.sql`.
 Se bisogna ricreare il database da zero:
