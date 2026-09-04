@@ -22,36 +22,37 @@
     </nav>
 
     <main class="container my-5">
-        <section class="page-heading mb-4">
-            <h1>Area sitter</h1>
-            <p class="text-muted mb-0">Gestisci profilo, animali accettati e servizi offerti.</p>
-        </section>
-
         <section class="dashboard-grid">
             <div class="dashboard-panel dashboard-panel-full">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <div>
-                        <h2 class="h4 mb-1">
-                            Notifiche <span id="sitterNotificationsBadge" class="badge text-bg-danger d-none"></span>
-                        </h2>
-                        <p class="text-muted mb-0">Ultimi aggiornamenti su richieste, pagamenti, recensioni e messaggi.</p>
+                        <h1 class="h4 mb-1 position-relative">
+                            Notifiche <span id="sitterNotificationsBadge" class="nav-count-badge d-none">0</span>
+                        </h1>
+                        <p class="text-muted mb-0">Aggiornamenti su richieste, pagamenti, recensioni e messaggi.</p>
                     </div>
-                    <button class="btn btn-outline-primary btn-sm" type="button" id="markAllNotificationsReadButton">
-                        Segna tutte come lette
-                    </button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-primary btn-sm d-none" type="button" id="markAllNotificationsReadButton">
+                            Segna tutte come lette
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm d-none" type="button" id="deleteAllNotificationsButton">
+                            Elimina tutte
+                        </button>
+                    </div>
                 </div>
                 <div id="sitterNotificationsList"></div>
                 <button class="btn btn-outline-primary d-none mt-3" type="button" id="loadMoreNotificationsButton">
                     Mostra altre notifiche
                 </button>
             </div>
+
             <div class="dashboard-panel dashboard-panel-full">
                 <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
                     <div>
                         <h2 class="h4 mb-1">Prenotazioni</h2>
                         <p class="text-muted mb-0">Gestisci richieste, prenotazioni future e storico.</p>
                     </div>
-                    <select class="form-select booking-filter" id="sitterBookingPeriod">
+                    <select class="form-select booking-filter" id="sitterBookingPeriod" aria-label="Filtro prenotazioni">
                         <option value="future">Future</option>
                         <option value="past">Passate</option>
                         <option value="all">Tutte</option>
@@ -63,6 +64,7 @@
                     Mostra altre prenotazioni
                 </button>
             </div>
+
             <div class="dashboard-panel">
                 <h2 class="h4 mb-3">Profilo sitter</h2>
                 <div id="profileMessage" class="alert d-none" role="alert"></div>
@@ -70,6 +72,17 @@
                     <div class="col-12">
                         <label for="baseCity" class="form-label">Città base</label>
                         <input type="text" class="form-control" id="baseCity" required>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="profile-image-preview" id="profileImagePreview">PS</div>
+                            <div>
+                                <label for="profileImageFile" class="btn btn-outline-primary mb-1">Carica immagine</label>
+                                <input type="file" class="d-none" id="profileImageFile" accept="image/*">
+                                <input type="hidden" id="profileImageUrl">
+                                <p class="text-muted small mb-0">L'immagine viene usata come foto profilo nella ricerca sitter.</p>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-12">
                         <label for="bio" class="form-label">Bio</label>
