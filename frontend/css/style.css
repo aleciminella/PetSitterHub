@@ -373,6 +373,42 @@ main {
     margin-bottom: 1rem;
 }
 
+.admin-stat {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #ffffff;
+    height: 100%;
+}
+
+.admin-stat span {
+    display: block;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+}
+
+.admin-stat strong {
+    display: block;
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.admin-list-item {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #ffffff;
+}
+
+.admin-search {
+    min-width: 260px;
+}
+
+.admin-sort {
+    min-width: 190px;
+}
+
 @media (max-width: 991px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
