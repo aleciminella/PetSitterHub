@@ -22,9 +22,11 @@ async function register(req, res, next) {
 
     const passwordHash = await bcrypt.hash(password, 10); // crittografia della password prima di inserirla nel db
 
+
+    // per evitare SQL Injection (prende dati dall'array e li mette con $)
     const result = await pool.query(
       `insert into users (email, password_hash, first_name, last_name, role, phone, city)
-       values ($1, $2, $3, $4, $5, $6, $7) // per evitare SQL Injection (prende dati dall'array)
+       values ($1, $2, $3, $4, $5, $6, $7)
        returning id, email, first_name, last_name, role, phone, city, created_at`,
       [email, passwordHash, firstName, lastName, role, phone || null, city || null]
     );
