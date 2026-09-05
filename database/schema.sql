@@ -82,6 +82,7 @@ create table sitter_weekly_availability ( -- orario tipo della settimana
 );
 
 create table sitter_availability_exceptions ( -- giorni di apertura/chiusura speciali
+  id bigserial primary key,
   sitter_id bigint not null references sitter_profiles(id) on delete cascade,
   starts_on date not null,
   ends_on date not null,

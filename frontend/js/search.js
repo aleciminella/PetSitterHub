@@ -745,7 +745,7 @@ function openBookingModal(button) {
         $("#bookingEndTimeGroup").toggleClass("d-none", selectedBookingDraft.priceUnit === "fixed");
     }
 
-    renderBookingDates();
+    loadAvailabilitySlots();
     bootstrap.Modal.getOrCreateInstance(document.getElementById("bookingModal")).show();
 }
 

@@ -127,7 +127,12 @@ async function updateMyPetTypes(req, res, next) {
          and not (pet_type = any($2::varchar[]))`,
       [sitterId, cleanedPetTypes]
     );
-    await client.query("delete from sitter_pet_types where sitter_id = $1", [sitterId]);
+    await client.query(
+      `delete from sitter_pet_types
+       where sitter_id = $1
+         and not (pet_type = any($2::varchar[]))`,
+      [sitterId, cleanedPetTypes]
+    );
 
     for (const petType of cleanedPetTypes) {
       await client.query(

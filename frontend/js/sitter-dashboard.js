@@ -235,32 +235,56 @@ function renderServices(services) {
         $("#sitterServicesList").html('<div class="empty-state">Seleziona almeno un animale accettato per configurare i servizi.</div>');
         return;
     }
-    $("#sitterServicesList").html(services.map(function (service) {
-        const checked = service.enabled ? "checked" : "";
-        const price = service.price ? Number(service.price).toFixed(2) : "";
-        return `
-            <article class="sitter-service-row" data-service-id="${service.service_id}" data-pet-type="${service.pet_type}">
-                <div class="row align-items-center">
-                    <div class="col-lg-5">
-                        <div class="form-check">
-                            <input class="form-check-input service-enabled-input" type="checkbox" ${checked}>
-                            <label class="form-check-label fw-bold">${service.name}</label>
-                        </div>
-                        <p class="text-muted mb-0">${service.description || ""}</p>
-                    </div>
-                    <div class="col-lg-3">
-                        <span class="service-type">${getPetTypeLabel(service.pet_type)}</span>
-                    </div>
-                    <div class="col-lg-2">
-                        <span class="text-muted">${getPriceUnitLabel(service.price_unit)}</span>
-                    </div>
-                    <div class="col-lg-2">
-                        <input class="form-control service-price-input" type="number" min="0" step="0.01" value="${price}" placeholder="Prezzo">
-                    </div>
+
+    const groupedServices = services.reduce(function (groups, service) {
+        if (!groups[service.pet_type]) {
+            groups[service.pet_type] = [];
+        }
+        groups[service.pet_type].push(service);
+        return groups;
+    }, {});
+    const petTypes = Object.keys(groupedServices);
+
+    $("#sitterServicesList").html(`
+        <div class="sitter-pet-tabs mb-3">
+            ${petTypes.map(function (petType, index) {
+                return `
+                    <button class="btn btn-sm ${index === 0 ? "btn-primary" : "btn-outline-primary"} sitter-service-tab" type="button" data-pet-type="${petType}">
+                        ${getPetTypeLabel(petType)}
+                    </button>
+                `;
+            }).join("")}
+        </div>
+        ${petTypes.map(function (petType, index) {
+            return `
+                <div class="sitter-service-panel ${index === 0 ? "" : "d-none"}" data-pet-type="${petType}">
+                    ${groupedServices[petType].map(function (service) {
+                        const checked = service.enabled ? "checked" : "";
+                        const price = service.price ? Number(service.price).toFixed(2) : "";
+                        return `
+                            <article class="sitter-service-row" data-service-id="${service.service_id}" data-pet-type="${service.pet_type}">
+                                <div class="row align-items-center g-3">
+                                    <div class="col-lg-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input service-enabled-input" type="checkbox" ${checked}>
+                                            <label class="form-check-label fw-bold">${service.name}</label>
+                                        </div>
+                                        <p class="text-muted mb-0">${service.description || ""}</p>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <span class="text-muted">${getPriceUnitLabel(service.price_unit)}</span>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <input class="form-control service-price-input" type="number" min="0" step="0.01" value="${price}" placeholder="Prezzo">
+                                    </div>
+                                </div>
+                            </article>
+                        `;
+                    }).join("")}
                 </div>
-            </article>
-        `;
-    }).join(""));
+            `;
+        }).join("")}
+    `);
 }
 
 function loadServices() {
@@ -821,6 +845,16 @@ $(document).ready(function () {
     $("#servicesForm").on("submit", saveServices);
     $("#refreshServicesButton").on("click", loadServices);
     $("#refreshAvailabilityButton").on("click", loadAvailability);
+
+    $("#sitterServicesList").on("click", ".sitter-service-tab", function () {
+        const button = $(this);
+        const petType = button.data("pet-type");
+
+        $("#sitterServicesList .sitter-service-tab").removeClass("btn-primary").addClass("btn-outline-primary");
+        button.removeClass("btn-outline-primary").addClass("btn-primary");
+        $("#sitterServicesList .sitter-service-panel").addClass("d-none");
+        $(`#sitterServicesList .sitter-service-panel[data-pet-type="${petType}"]`).removeClass("d-none");
+    });
 
     $("#profileImageFile").on("change", function () {
         const file = this.files && this.files[0];

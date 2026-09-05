@@ -10,11 +10,13 @@ main {
 }
 
 .hero {
-    min-height: 360px;
+    min-height: 420px;
     display: flex;
     align-items: center;
     color: white;
-    background: linear-gradient(90deg, rgba(0, 0, 0, .62), rgba(0, 0, 0, .25)), #2f6f73;
+    background:
+        linear-gradient(90deg, rgba(0, 0, 0, .62), rgba(0, 0, 0, .22)),
+        url("../assets/hero-dog.jpg") center center / cover no-repeat;
 }
 
 .hero h1 {
