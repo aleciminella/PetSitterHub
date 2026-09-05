@@ -21,6 +21,7 @@ before(async () => {
 
 after(async () => {
   await cleanupCreatedBookings();
+  await cleanupCreatedUsers();
   await new Promise((resolve, reject) => {
     server.close((err) => (err ? reject(err) : resolve()));
   });
@@ -61,6 +62,7 @@ async function login(email, password = "password123") {
 }
 
 const createdBookingIds = [];
+const createdUserEmails = [];
 
 function nextAvailableMondayAt(hour, durationHours = 1) {
   const date = new Date();
@@ -140,6 +142,12 @@ async function cleanupCreatedBookings() {
   }
 }
 
+async function cleanupCreatedUsers() {
+  for (const email of createdUserEmails.splice(0)) {
+    await pool.query("delete from users where email = $1", [email]);
+  }
+}
+
 describe("API pubbliche", () => {
   test("health e health/db rispondono correttamente", async () => {
     const health = await apiRequest("/health");
@@ -165,6 +173,29 @@ describe("API pubbliche", () => {
 });
 
 describe("Autenticazione e ruoli", () => {
+  test("registrazione crea utente e restituisce token", async () => {
+    const email = `test-register-${Date.now()}@example.com`;
+    createdUserEmails.push(email);
+
+    const { body, status } = await apiRequest("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        password: "password123",
+        firstName: "Test",
+        lastName: "Register",
+        role: "owner",
+        phone: "3330000000",
+        city: "Roma"
+      })
+    });
+
+    assert.equal(status, 201);
+    assert.ok(body.token);
+    assert.equal(body.user.email, email);
+    assert.equal(body.user.role, "owner");
+  });
+
   test("login corretto restituisce utente e token", async () => {
     const { body, status } = await apiRequest("/auth/login", {
       method: "POST",
