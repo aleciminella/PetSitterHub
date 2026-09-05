@@ -7,13 +7,13 @@ const PET_TYPES = [
     { value: "rettile", label: "Rettile" }
 ];
 const WEEK_DAYS = [
-    { value: 0, label: "Domenica" },
     { value: 1, label: "Lunedì" },
     { value: 2, label: "Martedì" },
     { value: 3, label: "Mercoledì" },
     { value: 4, label: "Giovedì" },
     { value: 5, label: "Venerdì" },
-    { value: 6, label: "Sabato" }
+    { value: 6, label: "Sabato" },
+    { value: 0, label: "Domenica" }
 ];
 
 let availabilityExceptions = [];
@@ -321,13 +321,23 @@ function getSelectedServices() {
 function saveServices(event) {
     event.preventDefault();
     hideMessage("#servicesMessage");
+    const selectedServices = getSelectedServices();
+    const hasMissingPrice = selectedServices.some(function (service) {
+        return service.price === "";
+    });
+
+    if (hasMissingPrice) {
+        showMessage("#servicesMessage", "danger", "Non hai inserito il prezzo per il servizio, riprovare");
+        return;
+    }
+
     $.ajax({
         url: `${API_BASE_URL}/sitters/me/services`,
         method: "PUT",
         headers: authHeaders(),
         contentType: "application/json",
         data: JSON.stringify({
-            services: getSelectedServices()
+            services: selectedServices
         }),
         success: function () {
             showMessage("#servicesMessage", "success", "Servizi salvati correttamente.");
@@ -351,6 +361,16 @@ function formatDate(value) {
         return "";
     }
     return String(value).slice(0, 10);
+}
+
+function formatDateForDisplay(value) {
+    const date = formatDate(value);
+
+    if (!date) {
+        return "";
+    }
+
+    return new Date(`${date}T12:00:00`).toLocaleDateString("it-IT");
 }
 
 function renderWeeklyAvailability(weeklyAvailability) {
@@ -389,7 +409,7 @@ function renderAvailabilityExceptions() {
             <article class="availability-exception-item">
                 <div>
                     <h4 class="h6 mb-1">${label}</h4>
-                    <p class="mb-1">Dal ${exception.startsOn} al ${exception.endsOn}${timeText}</p>
+                    <p class="mb-1">Dal ${formatDateForDisplay(exception.startsOn)} al ${formatDateForDisplay(exception.endsOn)}${timeText}</p>
                     <p class="text-muted mb-0">${exception.note || "Nessuna nota."}</p>
                 </div>
                 <button class="btn btn-outline-danger btn-sm remove-exception-button" type="button" data-index="${index}">
