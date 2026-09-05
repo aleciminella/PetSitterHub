@@ -82,6 +82,13 @@ function getPriceUnitLabel(priceUnit) {
     return labels[priceUnit] || priceUnit;
 }
 
+function formatMoney(value) {
+    return new Intl.NumberFormat("it-IT", {
+        style: "currency",
+        currency: "EUR"
+    }).format(Number(value || 0));
+}
+
 function userInitials(user) {
     return `${(user.first_name || "").charAt(0)}${(user.last_name || "").charAt(0)}`.toUpperCase() || "PS";
 }
