@@ -41,6 +41,15 @@ main {
     max-width: 640px;
 }
 
+.required-marker {
+    color: #dc3545;
+    font-weight: 700;
+}
+
+.toggle-password-button {
+    min-width: 48px;
+}
+
 .sitter-card {
     height: 100%;
     border: 1px solid #dee2e6;

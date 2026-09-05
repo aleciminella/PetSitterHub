@@ -7,8 +7,9 @@ function showMessage(type, text) {
         .text(text);
 }
 
-function saveUser(user) {
-    localStorage.setItem("petsitterhubUser", JSON.stringify(user));
+function saveSession(response) {
+    localStorage.setItem("petsitterhubUser", JSON.stringify(response.user));
+    localStorage.setItem("petsitterhubToken", response.token);
 }
 
 function redirectToHome() {
@@ -27,6 +28,13 @@ function setFormLoading(form, isLoading) {
 $(document).ready(function () {
     $("button[type='submit']").each(function () {
         $(this).data("default-text", $(this).text());
+    });
+
+    $(".toggle-password-button").on("click", function () {
+        const target = $($(this).data("target"));
+        const isPassword = target.attr("type") === "password";
+        target.attr("type", isPassword ? "text" : "password");
+        $(this).attr("aria-label", isPassword ? "Nascondi password" : "Mostra password");
     });
 
     $("#registerForm").on("submit", function (event) {
@@ -51,7 +59,7 @@ $(document).ready(function () {
             contentType: "application/json",
             data: JSON.stringify(userData),
             success: function (response) {
-                saveUser(response.user);
+                saveSession(response);
                 showMessage("success", "Registrazione completata.");
                 redirectToHome();
             },
@@ -82,7 +90,7 @@ $(document).ready(function () {
             contentType: "application/json",
             data: JSON.stringify(loginData),
             success: function (response) {
-                saveUser(response.user);
+                saveSession(response);
                 showMessage("success", "Login effettuato.");
                 redirectToHome();
             },
