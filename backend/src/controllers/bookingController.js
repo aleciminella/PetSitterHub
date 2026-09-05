@@ -20,11 +20,11 @@ function getPagination(query) {
 
 function addPeriodFilter(conditions, period) {
   if (period === "future") {
-    conditions.push("b.ends_at >= now()");
+    conditions.push("(b.ends_at >= now() or b.status = 'pending')");
   }
 
   if (period === "past") {
-    conditions.push("b.ends_at < now()");
+    conditions.push("b.ends_at < now() and b.status <> 'pending'");
   }
 }
 
