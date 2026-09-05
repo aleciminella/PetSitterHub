@@ -622,7 +622,7 @@ function renderBookingDates() {
 function loadAvailabilitySlots() {
     const from = formatDateForInput(new Date());
     const toDate = new Date();
-    toDate.setDate(toDate.getDate() + 45);
+    toDate.setDate(toDate.getDate() + 30);
     const to = formatDateForInput(toDate);
 
     setBookingSubmitDisabled(true);
