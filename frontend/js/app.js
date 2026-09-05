@@ -31,7 +31,14 @@ function loadNavbarBadge(user) {
 }
 
 function updateNavbar() {
-    const user = getSavedUser();
+    let user = getSavedUser();
+    const token = getSavedToken();
+
+    if (user && !token) {
+        localStorage.removeItem("petsitterhubUser");
+        user = null;
+    }
+
     const inPages = window.location.pathname.includes("/pages/");
     const prefix = inPages ? "../" : "";
     const currentPage = window.location.pathname.split("/").pop() || "index.html";

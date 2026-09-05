@@ -26,23 +26,28 @@
             <div id="authMessage" class="alert d-none" role="alert"></div>
             <form id="registerForm" class="row g-3">
                 <div class="col-md-6">
-                    <label for="firstName" class="form-label">Nome</label>
+                    <label for="firstName" class="form-label">Nome <span class="required-marker">*</span></label>
                     <input type="text" class="form-control" id="firstName" required>
                 </div>
                 <div class="col-md-6">
-                    <label for="lastName" class="form-label">Cognome</label>
+                    <label for="lastName" class="form-label">Cognome <span class="required-marker">*</span></label>
                     <input type="text" class="form-control" id="lastName" required>
                 </div>
                 <div class="col-12">
-                    <label for="email" class="form-label">Email</label>
+                    <label for="email" class="form-label">Email <span class="required-marker">*</span></label>
                     <input type="email" class="form-control" id="email" required>
                 </div>
                 <div class="col-12">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" required>
+                    <label for="password" class="form-label">Password <span class="required-marker">*</span></label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" required>
+                        <button class="btn btn-outline-secondary toggle-password-button" type="button" data-target="#password" aria-label="Mostra password">
+                            <span aria-hidden="true">&#128065;</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="col-md-6">
-                    <label for="role" class="form-label">Tipo account</label>
+                    <label for="role" class="form-label">Tipo account <span class="required-marker">*</span></label>
                     <select class="form-select" id="role" required>
                         <option value="">Seleziona</option>
                         <option value="owner">Proprietario</option>
