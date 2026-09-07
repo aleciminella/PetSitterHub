@@ -39,6 +39,14 @@ function hasInvalidDates(startsAt, endsAt) {
 
 
 
+function hasPastStart(startsAt) {
+  const start = new Date(startsAt);
+
+  return Number.isNaN(start.getTime()) || start <= new Date();
+}
+
+
+
 
 function hasValidSlot(date) { // controlla che le prenotazioni non abbiano orari strani ma devono essere ore tonde spaccate
   return date.getSeconds() === 0
@@ -272,6 +280,7 @@ function slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, availab
 async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMode) {
   const start = new Date(rangeStart);
   const end = new Date(rangeEnd);
+  const now = new Date();
   const mode = availabilityMode || "hourly_slot";
   const { weeklyAvailability, exceptions, acceptedBookings } = await loadScheduleAndAcceptedBookings(
     sitterId,
@@ -297,7 +306,7 @@ async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMo
       const slotStart = atMinutes(date, availableStart);
       const slotEnd = atMinutes(date, availableEnd);
 
-      if (!slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
+      if (slotStart > now && !slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
         slots.push({
           startsAt: slotStart.toISOString(),
           endsAt: slotEnd.toISOString()
@@ -308,7 +317,7 @@ async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMo
         const slotStart = atMinutes(date, minutes);
         const slotEnd = atMinutes(date, minutes + SLOT_MINUTES);
 
-        if (!slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
+        if (slotStart > now && !slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
           slots.push({
             startsAt: slotStart.toISOString(),
             endsAt: slotEnd.toISOString()
@@ -379,6 +388,7 @@ module.exports = {
   getServiceAvailabilityMode,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
+  hasPastStart,
   isSitterAvailable,
   listAvailableSlots,
   matchesSitterAvailabilitySchedule

@@ -4,6 +4,7 @@ const {
   findCompatibleSitterService,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
+  hasPastStart,
   isSitterAvailable
 } = require("../services/bookingService");
 const { createNotification } = require("../services/notificationService");
@@ -178,6 +179,12 @@ async function createBooking(req, res, next) {
       });
     }
 
+    if (hasPastStart(startsAt)) {
+      return res.status(400).json({
+        error: "Non puoi prenotare un orario già passato"
+      });
+    }
+
     const service = await findCompatibleSitterService(req.user.id, petId, sitterId, serviceId);
 
     if (!service) {
@@ -255,6 +262,12 @@ async function quoteBooking(req, res, next) {
     if (hasInvalidDates(startsAt, endsAt)) {
       return res.status(400).json({
         error: "Date prenotazione non valide"
+      });
+    }
+
+    if (hasPastStart(startsAt)) {
+      return res.status(400).json({
+        error: "Non puoi prenotare un orario già passato"
       });
     }
 
@@ -351,6 +364,12 @@ async function acceptBooking(req, res, next) {
     if (booking.status !== "pending") {
       return res.status(400).json({
         error: "La prenotazione non può essere accettata"
+      });
+    }
+
+    if (hasPastStart(booking.starts_at)) {
+      return res.status(400).json({
+        error: "Non puoi accettare una prenotazione già iniziata"
       });
     }
 

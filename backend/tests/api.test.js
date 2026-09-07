@@ -305,6 +305,28 @@ describe("Animali proprietario", () => {
 });
 
 describe("Prenotazioni, pagamenti e messaggi", () => {
+  test("un proprietario non può prenotare un orario già passato", async () => {
+    const ownerToken = await login("mario.owner@example.com");
+    const startsAt = new Date(Date.now() - (2 * 60 * 60 * 1000));
+    startsAt.setMinutes(0, 0, 0);
+    const endsAt = new Date(startsAt.getTime() + (60 * 60 * 1000));
+
+    const result = await apiRequest("/bookings", {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        sitterId: 1,
+        serviceId: 1,
+        petId: 1,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString()
+      })
+    });
+
+    assert.equal(result.status, 400);
+    assert.equal(result.body.error, "Non puoi prenotare un orario già passato");
+  });
+
   test("un proprietario crea una richiesta e il sitter può accettarla", async () => {
     const ownerToken = await login("mario.owner@example.com");
     const sitterToken = await login("giulia.sitter@example.com");
@@ -406,4 +428,3 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
     assert.ok(unreadAfterRead.body.unreadCount < unreadAfterSend.body.unreadCount);
   });
 });
-
