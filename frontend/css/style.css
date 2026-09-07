@@ -245,7 +245,8 @@ main {
     color: #664d03;
 }
 
-.booking-status-accepted {
+.booking-status-accepted,
+.booking-status-paid {
     background: #d1e7dd;
     color: #0f5132;
 }
@@ -369,6 +370,17 @@ main {
     font-weight: 700;
     line-height: 1.35rem;
     text-align: center;
+}
+
+.nav-unread-dot {
+    position: absolute;
+    top: 0.15rem;
+    right: -0.1rem;
+    width: 0.55rem;
+    height: 0.55rem;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: #dc3545;
 }
 
 .message-button-wrapper {

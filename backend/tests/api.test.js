@@ -83,7 +83,7 @@ function nextAvailableMondayAt(hour, durationHours = 1) {
   };
 }
 
-async function getDemoBookingInput(ownerToken) {
+async function getDemoBookingInput(ownerToken, sitterName = "Giulia") {
   const pets = await apiRequest("/pets", {
     token: ownerToken
   });
@@ -95,7 +95,7 @@ async function getDemoBookingInput(ownerToken) {
   const sitters = await apiRequest("/sitters?petType=cane");
   assert.equal(sitters.status, 200);
 
-  const sitter = sitters.body.sitters.find((item) => item.first_name === "Giulia");
+  const sitter = sitters.body.sitters.find((item) => item.first_name === sitterName);
   assert.ok(sitter);
 
   const service = sitter.services.find((item) => item.name === "Passeggiata");
@@ -108,8 +108,8 @@ async function getDemoBookingInput(ownerToken) {
   };
 }
 
-async function createDemoBooking(ownerToken, hour = 10) {
-  const bookingInput = await getDemoBookingInput(ownerToken);
+async function createDemoBooking(ownerToken, hour = 10, sitterName = "Giulia") {
+  const bookingInput = await getDemoBookingInput(ownerToken, sitterName);
   const bookingDates = nextAvailableMondayAt(hour);
 
   const created = await apiRequest("/bookings", {
@@ -305,6 +305,28 @@ describe("Animali proprietario", () => {
 });
 
 describe("Prenotazioni, pagamenti e messaggi", () => {
+  test("un proprietario non può prenotare un orario già passato", async () => {
+    const ownerToken = await login("mario.owner@example.com");
+    const startsAt = new Date(Date.now() - (2 * 60 * 60 * 1000));
+    startsAt.setMinutes(0, 0, 0);
+    const endsAt = new Date(startsAt.getTime() + (60 * 60 * 1000));
+
+    const result = await apiRequest("/bookings", {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        sitterId: 1,
+        serviceId: 1,
+        petId: 1,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString()
+      })
+    });
+
+    assert.equal(result.status, 400);
+    assert.equal(result.body.error, "Non puoi prenotare un orario già passato");
+  });
+
   test("un proprietario crea una richiesta e il sitter può accettarla", async () => {
     const ownerToken = await login("mario.owner@example.com");
     const sitterToken = await login("giulia.sitter@example.com");
@@ -312,6 +334,18 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
 
     assert.equal(booking.status, "pending");
     assert.ok(Number(booking.total_price) > 0);
+
+    const pendingDuplicate = await apiRequest("/bookings", {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        ...input,
+        ...dates,
+        notes: "Duplicato ancora in attesa da bloccare."
+      })
+    });
+    assert.equal(pendingDuplicate.status, 409);
+    assert.equal(pendingDuplicate.body.error, "Hai già inviato questa richiesta di prenotazione");
 
     const forbiddenAccept = await apiRequest(`/bookings/${booking.id}/accept`, {
       method: "PATCH",
@@ -326,17 +360,42 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
     assert.equal(accepted.status, 200);
     assert.equal(accepted.body.booking.status, "accepted");
 
-    const overlap = await apiRequest("/bookings", {
+    const acceptedDuplicate = await apiRequest("/bookings", {
       method: "POST",
       token: ownerToken,
       body: JSON.stringify({
         ...input,
         ...dates,
-        notes: "Prenotazione sovrapposta da bloccare."
+        notes: "Duplicato già accettato da bloccare."
       })
     });
-    assert.equal(overlap.status, 409);
-    assert.equal(overlap.body.error, "Sitter non disponibile nell'orario selezionato");
+    assert.equal(acceptedDuplicate.status, 409);
+    assert.equal(acceptedDuplicate.body.error, "Hai già inviato questa richiesta di prenotazione");
+  });
+
+  test("una richiesta rifiutata può essere inviata nuovamente", async () => {
+    const ownerToken = await login("mario.owner@example.com");
+    const sitterToken = await login("giulia.sitter@example.com");
+    const { booking, input, dates } = await createDemoBooking(ownerToken, 13);
+
+    const rejected = await apiRequest(`/bookings/${booking.id}/reject`, {
+      method: "PATCH",
+      token: sitterToken
+    });
+    assert.equal(rejected.status, 200);
+    assert.equal(rejected.body.booking.status, "rejected");
+
+    const recreated = await apiRequest("/bookings", {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        ...input,
+        ...dates,
+        notes: "Nuova richiesta dopo il rifiuto."
+      })
+    });
+    assert.equal(recreated.status, 201);
+    createdBookingIds.push(recreated.body.booking.id);
   });
 
   test("il pagamento è possibile solo dopo l'accettazione del sitter", async () => {
@@ -405,5 +464,61 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
     assert.equal(unreadAfterRead.status, 200);
     assert.ok(unreadAfterRead.body.unreadCount < unreadAfterSend.body.unreadCount);
   });
-});
 
+  test("un proprietario può recensire un sitter una sola volta e modificare la recensione", async () => {
+    const ownerToken = await login("mario.owner@example.com");
+    const firstBooking = await createDemoBooking(ownerToken, 10, "Luca");
+    const secondBooking = await createDemoBooking(ownerToken, 12, "Luca");
+
+    await pool.query(
+      `update bookings
+       set status = 'accepted',
+           starts_at = now() - interval '3 hours',
+           ends_at = now() - interval '2 hours'
+       where id = $1`,
+      [firstBooking.booking.id]
+    );
+    await pool.query(
+      `update bookings
+       set status = 'accepted',
+           starts_at = now() - interval '90 minutes',
+           ends_at = now() - interval '30 minutes'
+       where id = $1`,
+      [secondBooking.booking.id]
+    );
+
+    const created = await apiRequest(`/bookings/${firstBooking.booking.id}/reviews`, {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        rating: 4,
+        comment: "Recensione creata dal test automatico."
+      })
+    });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.review.rating, 4);
+
+    const duplicate = await apiRequest(`/bookings/${secondBooking.booking.id}/reviews`, {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        rating: 5,
+        comment: "Seconda recensione da bloccare."
+      })
+    });
+    assert.equal(duplicate.status, 409);
+    assert.equal(duplicate.body.error, "Hai già recensito questo sitter");
+
+    const updated = await apiRequest(`/reviews/${created.body.review.id}`, {
+      method: "PUT",
+      token: ownerToken,
+      body: JSON.stringify({
+        rating: 5,
+        comment: "Recensione modificata dal test automatico."
+      })
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.review.rating, 5);
+    assert.equal(updated.body.review.comment, "Recensione modificata dal test automatico.");
+  });
+});

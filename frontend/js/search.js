@@ -92,8 +92,33 @@ function formatDateLabel(dateValue) {
     });
 }
 
-function isoDateTime(dateValue, timeValue) {
-    return `${dateValue}T${timeValue}:00`;
+function formatSlotTime(value) {
+    return new Date(value).toLocaleTimeString("it-IT", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Europe/Rome"
+    });
+}
+
+function formatBookingDateTime(value) {
+    return new Date(value).toLocaleString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Europe/Rome"
+    });
+}
+
+function bookingPeriodText(priceUnit, startsAt, endsAt) {
+    if (priceUnit === "fixed") {
+        return `Data e ora: ${formatBookingDateTime(startsAt)}`;
+    }
+
+    return `Inizio: ${formatBookingDateTime(startsAt)} · Fine: ${formatBookingDateTime(endsAt)}`;
 }
 
 function defaultStartTime() {
@@ -555,19 +580,18 @@ function renderHourlyTimes() {
     }
 
     $("#bookingStartTime").html(slots.map(function (slot) {
-        const time = slot.startsAt.slice(11, 16);
-        return `<option value="${time}">${time}</option>`;
+        return `<option value="${slot.startsAt}">${formatSlotTime(slot.startsAt)}</option>`;
     }).join(""));
 
     renderEndTimeOptions();
 }
 
 function renderEndTimeOptions() {
-    const startTime = $("#bookingStartTime").val();
+    const startsAt = $("#bookingStartTime").val();
     const date = $("#bookingDate").val();
     const day = availabilityDays.find((item) => item.date === date);
     const slots = day ? day.slots : [];
-    const selectedSlot = slots.find((slot) => slot.startsAt.slice(11, 16) === startTime);
+    const selectedSlot = slots.find((slot) => slot.startsAt === startsAt);
 
     if (!selectedSlot) {
         $("#bookingEndTime").html('<option value="">Nessun orario disponibile</option>');
@@ -575,8 +599,9 @@ function renderEndTimeOptions() {
         return;
     }
 
-    const endTime = selectedSlot.endsAt.slice(11, 16);
-    $("#bookingEndTime").html(`<option value="${endTime}">${endTime}</option>`);
+    $("#bookingEndTime").html(
+        `<option value="${selectedSlot.endsAt}">${formatSlotTime(selectedSlot.endsAt)}</option>`
+    );
 
     syncBookingDateTimes();
     checkAvailabilityAndQuote();
@@ -588,12 +613,11 @@ function syncBookingDateTimes() {
         return;
     }
 
-    const date = $("#bookingDate").val();
-    const startTime = $("#bookingStartTime").val();
-    const endTime = $("#bookingEndTime").val();
+    const startsAt = $("#bookingStartTime").val();
+    const endsAt = $("#bookingEndTime").val();
 
-    $("#bookingStart").val(date && startTime ? isoDateTime(date, startTime) : "");
-    $("#bookingEnd").val(date && endTime ? isoDateTime(date, endTime) : "");
+    $("#bookingStart").val(startsAt || "");
+    $("#bookingEnd").val(endsAt || "");
 }
 
 function renderDailyEndDates() {
@@ -681,7 +705,10 @@ function checkAvailabilityAndQuote() {
 
         $("#bookingServiceLabel").text(`${quote.serviceName} per ${petTypeLabel(quote.petType)}`);
         $("#bookingTotal").text(formatMoney(quote.totalPrice));
-        $("#bookingQuoteDetails").text(`${formatMoney(quote.price)} - ${priceUnitText(quote.priceUnit)}`);
+        $("#bookingQuoteDetails").html(`
+            <span class="d-block">${formatMoney(quote.price)} - ${priceUnitText(quote.priceUnit)}</span>
+            <span class="d-block mt-1">${bookingPeriodText(quote.priceUnit, startsAt, endsAt)}</span>
+        `);
         setBookingSubmitDisabled(false);
     }).fail(function (xhr) {
         showBookingMessage(xhr.responseJSON?.error || "Preventivo non disponibile.");
@@ -700,8 +727,8 @@ function syncDailyDatesFromSelectedSlots() {
         return;
     }
 
-    $("#bookingStart").val(startDay.slots[0].startsAt.slice(0, 19));
-    $("#bookingEnd").val(endDay.slots[endDay.slots.length - 1].endsAt.slice(0, 19));
+    $("#bookingStart").val(startDay.slots[0].startsAt);
+    $("#bookingEnd").val(endDay.slots[endDay.slots.length - 1].endsAt);
 }
 
 function openBookingModal(button) {

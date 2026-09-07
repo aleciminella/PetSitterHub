@@ -21,6 +21,7 @@ async function listSitterReviews(req, res, next) {
          r.rating,
          r.comment,
          r.created_at,
+         r.updated_at,
          u.first_name as owner_first_name,
          u.last_name as owner_last_name
        from reviews r
@@ -72,10 +73,24 @@ async function createReview(req, res, next) {
 
     const booking = bookingResult.rows[0];
 
+    const existingReview = await pool.query(
+      `select id
+       from reviews
+       where owner_id = $1
+         and sitter_id = $2`,
+      [req.user.id, booking.sitter_id]
+    );
+
+    if (existingReview.rows.length > 0) {
+      return res.status(409).json({
+        error: "Hai già recensito questo sitter"
+      });
+    }
+
     const result = await pool.query(
       `insert into reviews (booking_id, owner_id, sitter_id, rating, comment)
        values ($1, $2, $3, $4, $5)
-       returning id, booking_id, owner_id, sitter_id, rating, comment, created_at`,
+       returning id, booking_id, owner_id, sitter_id, rating, comment, created_at, updated_at`,
       [
         req.params.bookingId,
         req.user.id,
@@ -99,7 +114,7 @@ async function createReview(req, res, next) {
   } catch (err) {
     if (err.code === "23505") {
       return res.status(409).json({
-        error: "Recensione già inserita per questa prenotazione"
+        error: "Hai già recensito questo sitter"
       });
     }
 
@@ -107,7 +122,43 @@ async function createReview(req, res, next) {
   }
 }
 
+async function updateReview(req, res, next) {
+  try {
+    const parsedRating = Number(req.body.rating);
+
+    if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+      return res.status(400).json({
+        error: "Valutazione non valida"
+      });
+    }
+
+    const result = await pool.query(
+      `update reviews
+       set rating = $1,
+           comment = $2,
+           updated_at = now()
+       where id = $3
+         and owner_id = $4
+       returning id, booking_id, owner_id, sitter_id, rating, comment, created_at, updated_at`,
+      [parsedRating, req.body.comment || null, req.params.reviewId, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Recensione non trovata"
+      });
+    }
+
+    return res.json({
+      review: result.rows[0]
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   createReview,
-  listSitterReviews
+  listSitterReviews,
+  updateReview
 };

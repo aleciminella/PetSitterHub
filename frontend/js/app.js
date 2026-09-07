@@ -13,8 +13,8 @@ function logout() {
     window.location.href = "/index.html";
 }
 
-function renderNavBadge(count) {
-    return count > 0 ? `<span class="nav-badge">${count}</span>` : "";
+function renderNavUnreadDot(hasUnreadItems) {
+    return hasUnreadItems ? '<span class="nav-unread-dot" aria-hidden="true"></span>' : "";
 }
 
 function loadNavbarBadge(user) {
@@ -25,8 +25,15 @@ function loadNavbarBadge(user) {
         $.ajax({ url: "http://localhost:4000/api/notifications", method: "GET", headers: { Authorization: `Bearer ${token}` } }),
         $.ajax({ url: "http://localhost:4000/api/messages/unread-count", method: "GET", headers: { Authorization: `Bearer ${token}` } })
     ).done(function (notificationsResponse, messagesResponse) {
-        const total = (notificationsResponse[0].unreadCount || 0) + (messagesResponse[0].unreadCount || 0);
-        $(".dashboard-link").append(renderNavBadge(total));
+        const hasUnreadNotifications = Number(notificationsResponse[0].unreadCount || 0) > 0;
+        const hasUnreadMessages = Number(messagesResponse[0].unreadCount || 0) > 0;
+        const dashboardLink = $(".dashboard-link");
+
+        dashboardLink.append(renderNavUnreadDot(hasUnreadNotifications || hasUnreadMessages));
+
+        if (hasUnreadNotifications || hasUnreadMessages) {
+            dashboardLink.attr("aria-label", `${dashboardLink.text().trim()}. Hai elementi non letti`);
+        }
     });
 }
 

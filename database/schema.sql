@@ -120,6 +120,10 @@ create table bookings (
   check (ends_at > starts_at) -- impedisce date di fine antecedenti all'inizio
 );
 
+create unique index bookings_active_request_unique_idx
+  on bookings (owner_id, sitter_id, service_id, pet_id, starts_at, ends_at)
+  where status in ('pending', 'accepted');
+
 create table messages (
   id bigserial primary key,
   booking_id bigint not null references bookings(id) on delete cascade,
@@ -152,7 +156,9 @@ create table reviews (
   sitter_id bigint not null references sitter_profiles(id),
   rating integer not null check (rating between 1 and 5),
   comment text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (owner_id, sitter_id)
 );
 
 create table payments (

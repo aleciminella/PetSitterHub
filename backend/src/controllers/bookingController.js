@@ -2,8 +2,10 @@ const pool = require("../db/pool");
 const {
   calculateTotalPrice,
   findCompatibleSitterService,
+  hasActiveDuplicateBooking,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
+  hasPastStart,
   isSitterAvailable
 } = require("../services/bookingService");
 const { createNotification } = require("../services/notificationService");
@@ -29,11 +31,15 @@ function addPeriodFilter(conditions, period) {
 }
 
 function getBookingOrder(period) {
-  if (period === "future") {
-    return "b.starts_at asc";
-  }
+  const direction = period === "future" ? "asc" : "desc";
+  const statusPriority = `case b.status
+    when 'accepted' then 1
+    when 'rejected' then 2
+    when 'cancelled' then 3
+    else 4
+  end`;
 
-  return "b.starts_at desc";
+  return `b.starts_at::date ${direction}, ${statusPriority} asc, b.starts_at ${direction}, b.created_at asc`;
 }
 
 async function createBookingNotification(notification) {
@@ -86,13 +92,31 @@ async function listBookings(req, res, next) {
            s.name as service_name,
            sp.id as sitter_id,
            u.first_name as sitter_first_name,
-           u.last_name as sitter_last_name
+           u.last_name as sitter_last_name,
+           review.id as review_id,
+           review.rating as review_rating,
+           review.comment as review_comment,
+           b.id = (
+             select completed_booking.id
+             from bookings completed_booking
+             where completed_booking.owner_id = b.owner_id
+               and completed_booking.sitter_id = b.sitter_id
+               and (
+                 completed_booking.status = 'completed'
+                 or (completed_booking.status = 'accepted' and completed_booking.ends_at < now())
+               )
+             order by completed_booking.ends_at desc
+             limit 1
+           ) as can_review
          from bookings b
          join pets p on p.id = b.pet_id
          join services s on s.id = b.service_id
          join sitter_profiles sp on sp.id = b.sitter_id
          join users u on u.id = sp.user_id
          left join payments pay on pay.booking_id = b.id
+         left join reviews review
+           on review.owner_id = b.owner_id
+          and review.sitter_id = b.sitter_id
          where ${conditions.join(" and ")}
          order by ${getBookingOrder(period)}
          limit $${values.length - 1}
@@ -178,11 +202,32 @@ async function createBooking(req, res, next) {
       });
     }
 
+    if (hasPastStart(startsAt)) {
+      return res.status(400).json({
+        error: "Non puoi prenotare un orario già passato"
+      });
+    }
+
     const service = await findCompatibleSitterService(req.user.id, petId, sitterId, serviceId);
 
     if (!service) {
       return res.status(400).json({
         error: "Animale, sitter o servizio non compatibili"
+      });
+    }
+
+    const hasDuplicate = await hasActiveDuplicateBooking(
+      req.user.id,
+      petId,
+      sitterId,
+      serviceId,
+      startsAt,
+      endsAt
+    );
+
+    if (hasDuplicate) {
+      return res.status(409).json({
+        error: "Hai già inviato questa richiesta di prenotazione"
       });
     }
 
@@ -238,6 +283,12 @@ async function createBooking(req, res, next) {
       booking: bookingResult.rows[0]
     });
   } catch (err) {
+    if (err.code === "23505" && err.constraint === "bookings_active_request_unique_idx") {
+      return res.status(409).json({
+        error: "Hai già inviato questa richiesta di prenotazione"
+      });
+    }
+
     return next(err);
   }
 }
@@ -258,11 +309,32 @@ async function quoteBooking(req, res, next) {
       });
     }
 
+    if (hasPastStart(startsAt)) {
+      return res.status(400).json({
+        error: "Non puoi prenotare un orario già passato"
+      });
+    }
+
     const service = await findCompatibleSitterService(req.user.id, petId, sitterId, serviceId);
 
     if (!service) {
       return res.status(400).json({
         error: "Animale, sitter o servizio non compatibili"
+      });
+    }
+
+    const hasDuplicate = await hasActiveDuplicateBooking(
+      req.user.id,
+      petId,
+      sitterId,
+      serviceId,
+      startsAt,
+      endsAt
+    );
+
+    if (hasDuplicate) {
+      return res.status(409).json({
+        error: "Hai già inviato questa richiesta di prenotazione"
       });
     }
 
@@ -351,6 +423,12 @@ async function acceptBooking(req, res, next) {
     if (booking.status !== "pending") {
       return res.status(400).json({
         error: "La prenotazione non può essere accettata"
+      });
+    }
+
+    if (hasPastStart(booking.starts_at)) {
+      return res.status(400).json({
+        error: "Non puoi accettare una prenotazione già iniziata"
       });
     }
 
