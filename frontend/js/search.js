@@ -101,6 +101,26 @@ function formatSlotTime(value) {
     });
 }
 
+function formatBookingDateTime(value) {
+    return new Date(value).toLocaleString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Europe/Rome"
+    });
+}
+
+function bookingPeriodText(priceUnit, startsAt, endsAt) {
+    if (priceUnit === "fixed") {
+        return `Data e ora: ${formatBookingDateTime(startsAt)}`;
+    }
+
+    return `Inizio: ${formatBookingDateTime(startsAt)} · Fine: ${formatBookingDateTime(endsAt)}`;
+}
+
 function defaultStartTime() {
     return "08:00";
 }
@@ -685,7 +705,10 @@ function checkAvailabilityAndQuote() {
 
         $("#bookingServiceLabel").text(`${quote.serviceName} per ${petTypeLabel(quote.petType)}`);
         $("#bookingTotal").text(formatMoney(quote.totalPrice));
-        $("#bookingQuoteDetails").text(`${formatMoney(quote.price)} - ${priceUnitText(quote.priceUnit)}`);
+        $("#bookingQuoteDetails").html(`
+            <span class="d-block">${formatMoney(quote.price)} - ${priceUnitText(quote.priceUnit)}</span>
+            <span class="d-block mt-1">${bookingPeriodText(quote.priceUnit, startsAt, endsAt)}</span>
+        `);
         setBookingSubmitDisabled(false);
     }).fail(function (xhr) {
         showBookingMessage(xhr.responseJSON?.error || "Preventivo non disponibile.");
