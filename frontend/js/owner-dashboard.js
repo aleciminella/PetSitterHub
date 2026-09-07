@@ -173,7 +173,11 @@ function canPayBooking(booking) {
 }
 
 function canReviewBooking(booking) {
-    return booking.status === "completed";
+    return booking.status === "completed" && booking.can_review;
+}
+
+function escapeHtmlAttribute(value) {
+    return $("<div>").text(value || "").html().replace(/"/g, "&quot;");
 }
 
 function renderPets(pets) {
@@ -325,25 +329,31 @@ function renderReviewForm(booking) {
         return "";
     }
 
+    const editing = Boolean(booking.review_id);
+    const selectedRating = Number(booking.review_rating || 0);
+    const comment = escapeHtmlAttribute(booking.review_comment);
+
     return `
-        <form class="review-form row g-2 mt-3" data-id="${booking.id}">
+        <form class="review-form row g-2 mt-3" data-id="${booking.id}" data-review-id="${booking.review_id || ""}">
             <div class="col-md-4">
                 <label class="form-label" for="review-rating-${booking.id}">Recensione</label>
                 <select class="form-select review-rating" id="review-rating-${booking.id}" required>
                     <option value="">Voto</option>
-                    <option value="5">5 stelle</option>
-                    <option value="4">4 stelle</option>
-                    <option value="3">3 stelle</option>
-                    <option value="2">2 stelle</option>
-                    <option value="1">1 stella</option>
+                    <option value="5" ${selectedRating === 5 ? "selected" : ""}>5 stelle</option>
+                    <option value="4" ${selectedRating === 4 ? "selected" : ""}>4 stelle</option>
+                    <option value="3" ${selectedRating === 3 ? "selected" : ""}>3 stelle</option>
+                    <option value="2" ${selectedRating === 2 ? "selected" : ""}>2 stelle</option>
+                    <option value="1" ${selectedRating === 1 ? "selected" : ""}>1 stella</option>
                 </select>
             </div>
             <div class="col-md-8">
                 <label class="form-label" for="review-comment-${booking.id}">Commento</label>
-                <input class="form-control review-comment" id="review-comment-${booking.id}" type="text" placeholder="Scrivi una recensione">
+                <input class="form-control review-comment" id="review-comment-${booking.id}" type="text" value="${comment}" placeholder="Scrivi una recensione">
             </div>
             <div class="col-12">
-                <button class="btn btn-outline-primary btn-sm" type="submit">Invia recensione</button>
+                <button class="btn btn-outline-primary btn-sm" type="submit">
+                    ${editing ? "Modifica recensione" : "Invia recensione"}
+                </button>
             </div>
         </form>
     `;
@@ -480,9 +490,14 @@ function payBooking(bookingId, method) {
 }
 
 function sendReview(bookingId, form) {
+    const reviewId = form.data("review-id");
+    const editing = Boolean(reviewId);
+
     $.ajax({
-        url: `${API_BASE_URL}/bookings/${bookingId}/reviews`,
-        method: "POST",
+        url: editing
+            ? `${API_BASE_URL}/reviews/${reviewId}`
+            : `${API_BASE_URL}/bookings/${bookingId}/reviews`,
+        method: editing ? "PUT" : "POST",
         headers: authHeaders(),
         contentType: "application/json",
         data: JSON.stringify({
@@ -490,7 +505,10 @@ function sendReview(bookingId, form) {
             comment: form.find(".review-comment").val().trim()
         }),
         success: function () {
-            showBookingsMessage("success", "Recensione inviata correttamente.");
+            showBookingsMessage(
+                "success",
+                editing ? "Recensione modificata correttamente." : "Recensione inviata correttamente."
+            );
             loadBookings();
         },
         error: function (xhr) {

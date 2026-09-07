@@ -6,5 +6,6 @@ const router = express.Router();
 
 router.get("/sitters/:sitterId/reviews", reviewController.listSitterReviews);
 router.post("/bookings/:bookingId/reviews", verifyToken, requireRole("owner"), reviewController.createReview);
+router.put("/reviews/:reviewId", verifyToken, requireRole("owner"), reviewController.updateReview);
 
 module.exports = router;

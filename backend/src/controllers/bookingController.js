@@ -92,13 +92,31 @@ async function listBookings(req, res, next) {
            s.name as service_name,
            sp.id as sitter_id,
            u.first_name as sitter_first_name,
-           u.last_name as sitter_last_name
+           u.last_name as sitter_last_name,
+           review.id as review_id,
+           review.rating as review_rating,
+           review.comment as review_comment,
+           b.id = (
+             select completed_booking.id
+             from bookings completed_booking
+             where completed_booking.owner_id = b.owner_id
+               and completed_booking.sitter_id = b.sitter_id
+               and (
+                 completed_booking.status = 'completed'
+                 or (completed_booking.status = 'accepted' and completed_booking.ends_at < now())
+               )
+             order by completed_booking.ends_at desc
+             limit 1
+           ) as can_review
          from bookings b
          join pets p on p.id = b.pet_id
          join services s on s.id = b.service_id
          join sitter_profiles sp on sp.id = b.sitter_id
          join users u on u.id = sp.user_id
          left join payments pay on pay.booking_id = b.id
+         left join reviews review
+           on review.owner_id = b.owner_id
+          and review.sitter_id = b.sitter_id
          where ${conditions.join(" and ")}
          order by ${getBookingOrder(period)}
          limit $${values.length - 1}

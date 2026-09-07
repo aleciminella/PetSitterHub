@@ -83,7 +83,7 @@ function nextAvailableMondayAt(hour, durationHours = 1) {
   };
 }
 
-async function getDemoBookingInput(ownerToken) {
+async function getDemoBookingInput(ownerToken, sitterName = "Giulia") {
   const pets = await apiRequest("/pets", {
     token: ownerToken
   });
@@ -95,7 +95,7 @@ async function getDemoBookingInput(ownerToken) {
   const sitters = await apiRequest("/sitters?petType=cane");
   assert.equal(sitters.status, 200);
 
-  const sitter = sitters.body.sitters.find((item) => item.first_name === "Giulia");
+  const sitter = sitters.body.sitters.find((item) => item.first_name === sitterName);
   assert.ok(sitter);
 
   const service = sitter.services.find((item) => item.name === "Passeggiata");
@@ -108,8 +108,8 @@ async function getDemoBookingInput(ownerToken) {
   };
 }
 
-async function createDemoBooking(ownerToken, hour = 10) {
-  const bookingInput = await getDemoBookingInput(ownerToken);
+async function createDemoBooking(ownerToken, hour = 10, sitterName = "Giulia") {
+  const bookingInput = await getDemoBookingInput(ownerToken, sitterName);
   const bookingDates = nextAvailableMondayAt(hour);
 
   const created = await apiRequest("/bookings", {
@@ -463,5 +463,62 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
     });
     assert.equal(unreadAfterRead.status, 200);
     assert.ok(unreadAfterRead.body.unreadCount < unreadAfterSend.body.unreadCount);
+  });
+
+  test("un proprietario può recensire un sitter una sola volta e modificare la recensione", async () => {
+    const ownerToken = await login("mario.owner@example.com");
+    const firstBooking = await createDemoBooking(ownerToken, 10, "Luca");
+    const secondBooking = await createDemoBooking(ownerToken, 12, "Luca");
+
+    await pool.query(
+      `update bookings
+       set status = 'accepted',
+           starts_at = now() - interval '3 hours',
+           ends_at = now() - interval '2 hours'
+       where id = $1`,
+      [firstBooking.booking.id]
+    );
+    await pool.query(
+      `update bookings
+       set status = 'accepted',
+           starts_at = now() - interval '90 minutes',
+           ends_at = now() - interval '30 minutes'
+       where id = $1`,
+      [secondBooking.booking.id]
+    );
+
+    const created = await apiRequest(`/bookings/${firstBooking.booking.id}/reviews`, {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        rating: 4,
+        comment: "Recensione creata dal test automatico."
+      })
+    });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.review.rating, 4);
+
+    const duplicate = await apiRequest(`/bookings/${secondBooking.booking.id}/reviews`, {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        rating: 5,
+        comment: "Seconda recensione da bloccare."
+      })
+    });
+    assert.equal(duplicate.status, 409);
+    assert.equal(duplicate.body.error, "Hai già recensito questo sitter");
+
+    const updated = await apiRequest(`/reviews/${created.body.review.id}`, {
+      method: "PUT",
+      token: ownerToken,
+      body: JSON.stringify({
+        rating: 5,
+        comment: "Recensione modificata dal test automatico."
+      })
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.review.rating, 5);
+    assert.equal(updated.body.review.comment, "Recensione modificata dal test automatico.");
   });
 });

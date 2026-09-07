@@ -217,3 +217,53 @@ join users u on u.id = sp.user_id
 join services s on s.name = 'Passeggiata'
 where u.email = 'luca.sitter@example.com'
 on conflict (sitter_id, service_id, pet_type) do nothing;
+
+with demo_bookings(sitter_email, days_offset, start_time, status, total_price, notes) as (
+  values
+    ('giulia.sitter@example.com', -14, time '10:00', 'accepted', 12.00, 'Demo: passeggiata completata con Giulia'),
+    ('giulia.sitter@example.com', -10, time '11:00', 'rejected', 12.00, 'Demo: richiesta rifiutata da Giulia'),
+    ('giulia.sitter@example.com',   7, time '10:00', 'accepted', 12.00, 'Demo: passeggiata futura con Giulia'),
+    ('giulia.sitter@example.com',   9, time '11:00', 'rejected', 12.00, 'Demo: richiesta futura rifiutata da Giulia'),
+    ('luca.sitter@example.com',   -12, time '10:00', 'accepted', 10.00, 'Demo: passeggiata completata con Luca'),
+    ('luca.sitter@example.com',    -8, time '11:00', 'rejected', 10.00, 'Demo: richiesta rifiutata da Luca'),
+    ('luca.sitter@example.com',     8, time '10:00', 'accepted', 10.00, 'Demo: passeggiata futura con Luca'),
+    ('luca.sitter@example.com',    10, time '11:00', 'rejected', 10.00, 'Demo: richiesta futura rifiutata da Luca')
+)
+insert into bookings (owner_id, pet_id, pet_type, sitter_id, service_id, starts_at, ends_at, status, total_price, notes)
+select
+  owner.id,
+  pet.id,
+  pet.species,
+  sp.id,
+  service.id,
+  current_date + demo.days_offset + demo.start_time,
+  current_date + demo.days_offset + demo.start_time + interval '1 hour',
+  demo.status,
+  demo.total_price,
+  demo.notes
+from demo_bookings demo
+join users owner on owner.email = 'mario.owner@example.com'
+join pets pet on pet.owner_id = owner.id and pet.name = 'Luna'
+join users sitter_user on sitter_user.email = demo.sitter_email
+join sitter_profiles sp on sp.user_id = sitter_user.id
+join services service on service.name = 'Passeggiata'
+where not exists (
+  select 1
+  from bookings existing
+  where existing.notes = demo.notes
+);
+
+insert into reviews (booking_id, owner_id, sitter_id, rating, comment)
+select
+  booking.id,
+  booking.owner_id,
+  booking.sitter_id,
+  5,
+  'Giulia è stata puntuale, disponibile e molto attenta con Luna.'
+from bookings booking
+where booking.notes = 'Demo: passeggiata completata con Giulia'
+on conflict (owner_id, sitter_id) do update set
+  booking_id = excluded.booking_id,
+  rating = excluded.rating,
+  comment = excluded.comment,
+  updated_at = now();
