@@ -371,6 +371,17 @@ main {
     text-align: center;
 }
 
+.nav-unread-dot {
+    position: absolute;
+    top: 0.15rem;
+    right: -0.1rem;
+    width: 0.55rem;
+    height: 0.55rem;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: #dc3545;
+}
+
 .message-button-wrapper {
     position: relative;
     display: inline-block;
