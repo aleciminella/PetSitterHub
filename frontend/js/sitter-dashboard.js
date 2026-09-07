@@ -648,6 +648,12 @@ function renderUnreadMessagesBadge(booking) {
 }
 
 function updateBookingStatus(bookingId, action) {
+    const bookingCard = $(`#sitterBookingsList .booking-card[data-id="${bookingId}"]`);
+    const actionMessage = bookingCard.find(".booking-action-message");
+
+    hideMessage("#sitterBookingsMessage");
+    actionMessage.addClass("d-none").text("");
+
     $.ajax({
         url: `${API_BASE_URL}/bookings/${bookingId}/${action}`,
         method: "PATCH",
@@ -656,7 +662,18 @@ function updateBookingStatus(bookingId, action) {
             loadSitterBookings();
             loadNotifications();
         },
-        error: function () {
+        error: function (xhr) {
+            const isOccupiedSlot = action === "accept"
+                && xhr.status === 409
+                && xhr.responseJSON?.error === "Il sitter ha già una prenotazione accettata in questo orario";
+
+            if (isOccupiedSlot) {
+                actionMessage
+                    .removeClass("d-none")
+                    .text("Non è possibile accettare prenotazione poiché slot già occupato, rifiutare prenotazione o annullare la prenotazione che occupa questo slot per poter accettare.");
+                return;
+            }
+
             showMessage("#sitterBookingsMessage", "danger", "Errore durante l'aggiornamento della prenotazione.");
         }
     });
@@ -721,6 +738,7 @@ function renderSitterBookings(bookings, append) {
                         ${renderUnreadMessagesBadge(booking)}
                     </button>
                 </div>
+                <div class="alert alert-warning d-none mt-2 mb-0 booking-action-message" role="alert"></div>
                 <div class="booking-message-box d-none" id="sitter-messages-${booking.id}">
                     <div class="booking-messages-list mb-3"></div>
                     <div class="d-flex gap-2">
