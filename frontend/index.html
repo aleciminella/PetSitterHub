@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
+
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +9,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
+
+
 <body>
+
+    <!-- barra menu -->
     <nav class="navbar navbar-expand-lg bg-white border-bottom">
         <div class="container">
             <a class="navbar-brand fw-bold" href="index.html">PetSitterHub</a>
@@ -19,20 +25,26 @@
                     <li class="nav-item"><a class="nav-link" href="#search">Cerca sitter</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/services.html">Servizi</a></li>
                 </ul>
-                <div id="navbarActions" class="d-flex gap-2 ms-lg-3"></div>
+                <div id="navbarActions" class="d-flex gap-2 ms-lg-3"></div>  <!-- riempito da js. Se non sei loggato, pulsanti: Accedi e Registrati. Se sei loggato : Dashboard ed Esci. -->
             </div>
         </div>
     </nav>
 
+    <!-- banner benvenuto-->
     <header class="hero">
         <div class="container">
             <h1>PetSitterHub</h1>
             <p>Trova pet-sitter e dog-walker nella tua zona.</p>
-            <a class="btn btn-light" href="#search">Cerca un sitter</a>
+            <a class="btn btn-light" href="#search">Cerca un sitter</a> <!-- href che porta a sezione cerca -->
         </div>
     </header>
 
+
+
+
     <main class="container my-5">
+
+        <!-- barra ricerca filtri -->
         <section class="search-section" id="search">
             <h2 class="mb-4">Ricerca sitter</h2>
             <form class="row g-3" id="searchForm">
@@ -43,13 +55,13 @@
                 <div class="col-md-3">
                     <label for="petType" class="form-label">Animale</label>
                     <select class="form-select" id="petType">
-                        <option value="">Tutti gli animali</option>
+                        <option value="">Tutti gli animali</option> <!-- vengono aggiunte option tramite js-->
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="service" class="form-label">Servizio</label>
                     <select class="form-select" id="service">
-                        <option value="">Tutti i servizi</option>
+                        <option value="">Tutti i servizi</option> <!-- vengono aggiunte option tramite js-->
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -68,31 +80,47 @@
             </form>
         </section>
 
+
+        <!-- contenitore risultati (sitter) -->
         <section class="mt-5">
             <h2 class="mb-4">Sitter disponibili</h2>
-            <div class="row g-4" id="sittersList"></div>
+            <div class="row g-4" id="sittersList"></div> <!-- Js contatta il backend (GET /api/sitters) e genererà dentro questa scatola le schede grafiche di tutti i sitter trovati -->
         </section>
     </main>
 
+
+
+    <!-- 3 schede modali che restano invsibili finchè un utente non schiaccia un pulsante -->
+
+    <!-- finestra di prenotazione, si apre quando clicchi su "Prenota" sulla scheda di un sitter -->
     <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <form class="modal-content" id="bookingForm">
+
                 <div class="modal-header">
                     <h2 class="modal-title h5">Prenota servizio</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
                 </div>
+
+
                 <div class="modal-body">
-                    <p class="text-muted mb-3" id="bookingSummary"></p>
+                    <p class="text-muted mb-3" id="bookingSummary"></p> <!-- nome del sitter scelto da js -->
+
                     <div class="mb-3">
                         <label for="bookingPet" class="form-label">Animale</label>
-                        <select class="form-select" id="bookingPet" required></select>
+                        <select class="form-select" id="bookingPet" required></select> <!-- animale che si vuole affidare tra quelli in possesso da js-->
                     </div>
-                    <div id="bookingHourlySection">
-                        <div class="mb-3">
+
+                    
+
+                    <!-- sezioni che si alternano, js mostra l'una o l'altra a seconda del servizio -->
+
+                    <div id="bookingHourlySection"> <!-- Campi per data, ora inizio e ora fine -->
+                        <div class="mb-3"> 
                             <label for="bookingDate" class="form-label">Data</label>
                             <select class="form-select" id="bookingDate"></select>
                         </div>
-                        <div class="row g-3 mb-3">
+                        <div class="row g-3 mb-3"> 
                             <div class="col-md-6">
                                 <label for="bookingStartTime" class="form-label">Ora inizio</label>
                                 <select class="form-select" id="bookingStartTime"></select>
@@ -103,7 +131,8 @@
                             </div>
                         </div>
                     </div>
-                    <div id="bookingDailySection" class="d-none">
+
+                    <div id="bookingDailySection" class="d-none"> <!-- Campi per data inizio e data fine (per pensioni di più giorni) -->
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="bookingStartDateDaily" class="form-label">Data inizio</label>
@@ -115,8 +144,12 @@
                             </div>
                         </div>
                     </div>
+
                     <input type="hidden" id="bookingStart">
                     <input type="hidden" id="bookingEnd">
+
+
+                    <!--  Il box riepilogo che calcola il prezzo totale in tempo reale (#bookingTotal) -->
                     <div class="payment-summary mb-3" id="bookingQuoteSummary">
                         <div class="d-flex justify-content-between align-items-start gap-3">
                             <div>
@@ -130,12 +163,17 @@
                         </div>
                         <div class="small text-muted mt-2" id="bookingQuoteDetails">Il totale viene calcolato prima della conferma.</div>
                     </div>
+
+
+                    <!-- Casella di testo per le note speciali -->
                     <div class="mb-3">
                         <label for="bookingNotes" class="form-label">Note</label>
                         <textarea class="form-control" id="bookingNotes" rows="3"></textarea>
                     </div>
                     <div class="alert alert-warning d-none mb-0" id="bookingMessage"></div>
                 </div>
+                
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
                     <button type="submit" class="btn btn-primary" id="bookingSubmitButton">Invia richiesta</button>
@@ -144,6 +182,11 @@
         </div>
     </div>
 
+
+
+
+
+    <!-- finestra conferma invio che compare subito dopo aver prenotato-->
     <div class="modal fade" id="bookingResultModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -160,6 +203,9 @@
         </div>
     </div>
 
+
+
+    <!-- finestra che si apre se clicchi sulle stelline di un sitter -->
     <div class="modal fade" id="reviewsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content">
