@@ -267,3 +267,21 @@ on conflict (owner_id, sitter_id) do update set
   rating = excluded.rating,
   comment = excluded.comment,
   updated_at = now();
+
+insert into payments (booking_id, amount, method, status, provider_reference)
+select
+  booking.id,
+  booking.total_price,
+  'demo_card',
+  'paid',
+  'DEMO-SEED-' || booking.id
+from bookings booking
+where booking.notes in (
+  'Demo: passeggiata completata con Giulia',
+  'Demo: passeggiata completata con Luca'
+)
+on conflict (booking_id) do update set
+  amount = excluded.amount,
+  method = excluded.method,
+  status = excluded.status,
+  provider_reference = excluded.provider_reference;

@@ -871,8 +871,7 @@ $(document).ready(function () {
 
     $("#bookingPet").on("change", checkAvailabilityAndQuote);
     $("#bookingDate").on("change", function () {
-        syncBookingDateTimes();
-        checkAvailabilityAndQuote();
+        renderHourlyTimes();
     });
     $("#bookingStartTime").on("change", renderEndTimeOptions);
     $("#bookingEndTime").on("change", checkAvailabilityAndQuote);

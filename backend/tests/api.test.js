@@ -360,6 +360,16 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
     assert.equal(accepted.status, 200);
     assert.equal(accepted.body.booking.status, "accepted");
 
+    const bookingDate = dates.startsAt.slice(0, 10);
+    const availability = await apiRequest(
+      `/sitters/${input.sitterId}/availability/slots?from=${bookingDate}&to=${bookingDate}&serviceId=${input.serviceId}`
+    );
+    assert.equal(availability.status, 200);
+    const availableStarts = availability.body.days.flatMap((day) => (
+      day.slots.map((slot) => slot.startsAt)
+    ));
+    assert.equal(availableStarts.includes(dates.startsAt), false);
+
     const acceptedDuplicate = await apiRequest("/bookings", {
       method: "POST",
       token: ownerToken,
