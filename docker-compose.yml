@@ -33,6 +33,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-petsitterhub}:${POSTGRES_PASSWORD:-petsitterhub}@db:5432/${POSTGRES_DB:-petsitterhub}
       JWT_SECRET: ${JWT_SECRET:-dev-secret}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5500}
+      TZ: ${TZ:-Europe/Rome}
     ports:
       - "${BACKEND_PORT:-4000}:${BACKEND_PORT:-4000}"
     depends_on:

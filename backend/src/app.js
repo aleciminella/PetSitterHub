@@ -1,3 +1,5 @@
+process.env.TZ = process.env.TZ || "Europe/Rome";
+
 const express = require("express");
 const adminRoutes = require("./routes/adminRoutes");
 const authRoutes = require("./routes/authRoutes");
