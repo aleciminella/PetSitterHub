@@ -30,11 +30,15 @@ function addPeriodFilter(conditions, period) {
 }
 
 function getBookingOrder(period) {
-  if (period === "future") {
-    return "b.starts_at asc";
-  }
+  const direction = period === "future" ? "asc" : "desc";
+  const statusPriority = `case b.status
+    when 'accepted' then 1
+    when 'rejected' then 2
+    when 'cancelled' then 3
+    else 4
+  end`;
 
-  return "b.starts_at desc";
+  return `b.starts_at::date ${direction}, ${statusPriority} asc, b.starts_at ${direction}, b.created_at asc`;
 }
 
 async function createBookingNotification(notification) {

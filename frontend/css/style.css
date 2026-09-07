@@ -245,7 +245,8 @@ main {
     color: #664d03;
 }
 
-.booking-status-accepted {
+.booking-status-accepted,
+.booking-status-paid {
     background: #d1e7dd;
     color: #0f5132;
 }
