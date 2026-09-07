@@ -2,6 +2,7 @@ const pool = require("../db/pool");
 const {
   calculateTotalPrice,
   findCompatibleSitterService,
+  hasActiveDuplicateBooking,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
   hasPastStart,
@@ -197,6 +198,21 @@ async function createBooking(req, res, next) {
       });
     }
 
+    const hasDuplicate = await hasActiveDuplicateBooking(
+      req.user.id,
+      petId,
+      sitterId,
+      serviceId,
+      startsAt,
+      endsAt
+    );
+
+    if (hasDuplicate) {
+      return res.status(409).json({
+        error: "Hai già inviato questa richiesta di prenotazione"
+      });
+    }
+
     const totalPrice = calculateTotalPrice(Number(service.price), service.price_unit, startsAt, endsAt);
     const available = await isSitterAvailable(sitterId, startsAt, endsAt);
 
@@ -249,6 +265,12 @@ async function createBooking(req, res, next) {
       booking: bookingResult.rows[0]
     });
   } catch (err) {
+    if (err.code === "23505" && err.constraint === "bookings_active_request_unique_idx") {
+      return res.status(409).json({
+        error: "Hai già inviato questa richiesta di prenotazione"
+      });
+    }
+
     return next(err);
   }
 }
@@ -280,6 +302,21 @@ async function quoteBooking(req, res, next) {
     if (!service) {
       return res.status(400).json({
         error: "Animale, sitter o servizio non compatibili"
+      });
+    }
+
+    const hasDuplicate = await hasActiveDuplicateBooking(
+      req.user.id,
+      petId,
+      sitterId,
+      serviceId,
+      startsAt,
+      endsAt
+    );
+
+    if (hasDuplicate) {
+      return res.status(409).json({
+        error: "Hai già inviato questa richiesta di prenotazione"
       });
     }
 

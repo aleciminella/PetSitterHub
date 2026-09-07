@@ -181,6 +181,26 @@ async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) 
 
 
 
+async function hasActiveDuplicateBooking(ownerId, petId, sitterId, serviceId, startsAt, endsAt) {
+  const result = await pool.query(
+    `select id
+     from bookings
+     where owner_id = $1
+       and pet_id = $2
+       and sitter_id = $3
+       and service_id = $4
+       and starts_at = $5
+       and ends_at = $6
+       and status = any($7)
+     limit 1`,
+    [ownerId, petId, sitterId, serviceId, startsAt, endsAt, ["pending", "accepted"]]
+  );
+
+  return result.rows.length > 0;
+}
+
+
+
 
 async function getServiceAvailabilityMode(serviceId) {
   if (!serviceId) {
@@ -386,6 +406,7 @@ module.exports = {
   calculateTotalPrice,
   findCompatibleSitterService,
   getServiceAvailabilityMode,
+  hasActiveDuplicateBooking,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
   hasPastStart,

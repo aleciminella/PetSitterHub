@@ -335,6 +335,18 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
     assert.equal(booking.status, "pending");
     assert.ok(Number(booking.total_price) > 0);
 
+    const pendingDuplicate = await apiRequest("/bookings", {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        ...input,
+        ...dates,
+        notes: "Duplicato ancora in attesa da bloccare."
+      })
+    });
+    assert.equal(pendingDuplicate.status, 409);
+    assert.equal(pendingDuplicate.body.error, "Hai già inviato questa richiesta di prenotazione");
+
     const forbiddenAccept = await apiRequest(`/bookings/${booking.id}/accept`, {
       method: "PATCH",
       token: ownerToken
@@ -348,17 +360,42 @@ describe("Prenotazioni, pagamenti e messaggi", () => {
     assert.equal(accepted.status, 200);
     assert.equal(accepted.body.booking.status, "accepted");
 
-    const overlap = await apiRequest("/bookings", {
+    const acceptedDuplicate = await apiRequest("/bookings", {
       method: "POST",
       token: ownerToken,
       body: JSON.stringify({
         ...input,
         ...dates,
-        notes: "Prenotazione sovrapposta da bloccare."
+        notes: "Duplicato già accettato da bloccare."
       })
     });
-    assert.equal(overlap.status, 409);
-    assert.equal(overlap.body.error, "Sitter non disponibile nell'orario selezionato");
+    assert.equal(acceptedDuplicate.status, 409);
+    assert.equal(acceptedDuplicate.body.error, "Hai già inviato questa richiesta di prenotazione");
+  });
+
+  test("una richiesta rifiutata può essere inviata nuovamente", async () => {
+    const ownerToken = await login("mario.owner@example.com");
+    const sitterToken = await login("giulia.sitter@example.com");
+    const { booking, input, dates } = await createDemoBooking(ownerToken, 13);
+
+    const rejected = await apiRequest(`/bookings/${booking.id}/reject`, {
+      method: "PATCH",
+      token: sitterToken
+    });
+    assert.equal(rejected.status, 200);
+    assert.equal(rejected.body.booking.status, "rejected");
+
+    const recreated = await apiRequest("/bookings", {
+      method: "POST",
+      token: ownerToken,
+      body: JSON.stringify({
+        ...input,
+        ...dates,
+        notes: "Nuova richiesta dopo il rifiuto."
+      })
+    });
+    assert.equal(recreated.status, 201);
+    createdBookingIds.push(recreated.body.booking.id);
   });
 
   test("il pagamento è possibile solo dopo l'accettazione del sitter", async () => {
