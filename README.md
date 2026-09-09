@@ -76,6 +76,10 @@ Database: localhost:5432
 
 Se le API non caricano in manuale, controllare prima `http://localhost:4000/api/health/db`: se fallisce, PostgreSQL locale non è acceso o `DATABASE_URL` non corrisponde al proprio database.
 
+## Integrazione continua
+
+Il progetto usa GitHub Actions per eseguire automaticamente i test prima dell'integrazione delle modifiche in `main`. Il funzionamento della pipeline e le regole applicate al branch sono descritti in [docs/DEVOPS.md](docs/DEVOPS.md).
+
 ## Account demo
 
 Tutti gli account demo usano la password `password123`.
