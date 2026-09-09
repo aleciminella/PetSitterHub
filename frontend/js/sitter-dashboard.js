@@ -433,8 +433,8 @@ function loadAvailability() {
         method: "GET",
         headers: authHeaders(),
         success: function (response) {
-            renderWeeklyAvailability(response.weeklyAvailability || []);
-            availabilityExceptions = (response.exceptions || []).map(function (exception) {
+            renderWeeklyAvailability(response.weeklyAvailability || []); // Prende l'array dei giorni settimanali e popola i campi della lista della disponibilità ricorrente
+            availabilityExceptions = (response.exceptions || []).map(function (exception) { // Prende le eccezioni o date speciali (response.exceptions) e le trasforma in un formato JavaScript locale omogeneo
                 return {
                     startsOn: formatDate(exception.starts_on),
                     endsOn: formatDate(exception.ends_on),
@@ -444,7 +444,7 @@ function loadAvailability() {
                     note: exception.note || ""
                 };
             });
-            renderAvailabilityExceptions();
+            renderAvailabilityExceptions(); // Prende i dati appena formattati dentro availabilityExceptions e genera il codice HTML per mostrare visivamente a schermo la lista delle chiusure e delle date speciali configurate
         },
         error: function () {
             showMessage("#availabilityMessage", "danger", "Errore durante il caricamento della disponibilità.");

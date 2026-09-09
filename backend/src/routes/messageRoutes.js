@@ -4,8 +4,7 @@ const { verifyToken } = require("../middleware/authMiddleware");
 
 const router = express.Router({ mergeParams: true });
 
-router.get("/unread-count", verifyToken, messageController.countUnreadMessages);
-router.get("/", verifyToken, messageController.listMessages);
-router.post("/", verifyToken, messageController.createMessage);
+router.get("/", verifyToken, messageController.listMessages); // utilizzata per caricare i messaggi
+router.post("/", verifyToken, messageController.createMessage); // utilizzata per creare messaggi
 
 module.exports = router;

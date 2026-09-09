@@ -7,6 +7,8 @@ create table users (
   role varchar(20) not null check (role in ('owner', 'sitter', 'admin')),
   phone varchar(30),
   city varchar(100),
+  is_active boolean not null default true,
+  deleted_at timestamptz,
   created_at timestamptz not null default now()
 );
 

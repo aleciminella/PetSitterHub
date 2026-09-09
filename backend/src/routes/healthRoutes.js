@@ -3,14 +3,14 @@ const pool = require("../db/pool");
 
 const router = express.Router();
 
-router.get("/", (req, res) => {
+router.get("/", (req, res) => { // per confermare che il server web Node.js/Express sia acceso e in grado di rispondere alle richieste HTTP.
   res.json({
     status: "ok",
     service: "PetSitterHub API"
   });
 });
 
-router.get("/db", async (req, res) => {
+router.get("/db", async (req, res) => { // Serve a verificare che le credenziali e la connessione al database SQL siano corrette. es. http://localhost:4000/api/health/db
   const result = await pool.query("select now() as checked_at");
 
   res.json({

@@ -1,7 +1,7 @@
 const pool = require("../db/pool");
 const { createNotification } = require("../services/notificationService");
 
-async function findAccessibleBooking(bookingId, user) {
+async function findAccessibleBooking(bookingId, user) { // Verifica la sicurezza: controlla se la prenotazione esiste e se l'utente che la richiede è davvero il proprietario (b.owner_id) oppure il sitter assegnato (sp.user_id). Se non è nessuno dei due, blocca l'accesso
   const result = await pool.query(
     `select b.id, b.owner_id, sp.user_id as sitter_user_id
      from bookings b
