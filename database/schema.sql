@@ -62,11 +62,16 @@ create table pets (
   breed varchar(100),
   age integer check (age >= 0),
   notes text,
+  is_active boolean not null default true,
+  deleted_at timestamptz,
   created_at timestamptz not null default now(),
-  unique (owner_id, name), -- un proprietario può avere 2 animali con lo stesso nome
   unique (id, owner_id), -- l'animale ha un solo proprietario
   unique (id, species) -- l'animale può appartenere solo ad una specie
 );
+
+create unique index pets_active_owner_name_idx
+  on pets (owner_id, name)
+  where is_active = true;
 
 create table sitter_weekly_availability ( -- orario tipo della settimana
   id bigserial primary key,

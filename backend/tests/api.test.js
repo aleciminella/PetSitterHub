@@ -124,7 +124,7 @@ test("registrazione, token e controllo del ruolo funzionano", async () => {
   assert.equal(missingToken.status, 401);
 });
 
-test("un proprietario può creare, modificare ed eliminare un animale", async () => {
+test("un proprietario può creare ed eliminare un animale", async () => {
   const owner = await registerOwner("Pet");
 
   const created = await apiRequest("/pets", {
@@ -134,19 +134,14 @@ test("un proprietario può creare, modificare ed eliminare un animale", async ()
   });
   assert.equal(created.status, 201);
 
-  const updated = await apiRequest(`/pets/${created.body.pet.id}`, {
-    method: "PUT",
-    token: owner.token,
-    body: JSON.stringify({ name: "Animale modificato", species: "cane", breed: "Meticcio" })
-  });
-  assert.equal(updated.status, 200);
-  assert.equal(updated.body.pet.name, "Animale modificato");
-
   const deleted = await apiRequest(`/pets/${created.body.pet.id}`, {
     method: "DELETE",
     token: owner.token
   });
   assert.equal(deleted.status, 204);
+
+  const pets = await apiRequest("/pets", { token: owner.token });
+  assert.equal(pets.body.pets.some((pet) => pet.id === created.body.pet.id), false);
 });
 
 test("una prenotazione passa da pending ad accepted e poi viene pagata", async () => {

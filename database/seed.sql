@@ -59,21 +59,25 @@ insert into pets (owner_id, name, species, breed, age, notes)
 select id, 'Luna', 'cane', 'Labrador', 4, 'Ama le passeggiate lunghe.'
 from users
 where email = 'mario.owner@example.com'
-on conflict (owner_id, name) do update set
+on conflict (owner_id, name) where is_active = true do update set
   species = excluded.species,
   breed = excluded.breed,
   age = excluded.age,
-  notes = excluded.notes;
+  notes = excluded.notes,
+  is_active = true,
+  deleted_at = null;
 
 insert into pets (owner_id, name, species, breed, age, notes)
 select id, 'Milo', 'gatto', 'Europeo', 2, 'Diffidente con persone nuove.'
 from users
 where email = 'mario.owner@example.com'
-on conflict (owner_id, name) do update set
+on conflict (owner_id, name) where is_active = true do update set
   species = excluded.species,
   breed = excluded.breed,
   age = excluded.age,
-  notes = excluded.notes;
+  notes = excluded.notes,
+  is_active = true,
+  deleted_at = null;
 
 insert into sitter_profiles (user_id, bio, base_city, profile_image_url, verified)
 select id, 'Mi occupo di cani e gatti con esperienza e attenzione.', city, 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', true

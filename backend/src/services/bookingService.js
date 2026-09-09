@@ -56,9 +56,10 @@ function hasPastStart(startsAt) {
 
 
 
-function hasValidSlot(date) { // gli slot possono partire dai minuti configurati dal sitter, ma non avere secondi o millisecondi
+function hasValidSlot(date) { // gli slot devono iniziare e terminare su un'ora intera
   return date.getSeconds() === 0
-    && date.getMilliseconds() === 0;
+    && date.getMilliseconds() === 0
+    && date.getMinutes() === 0;
 }
 
 
@@ -178,6 +179,7 @@ async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) 
      join services s on s.id = ss.service_id
      where p.id = $1
        and p.owner_id = $2
+       and p.is_active = true
        and ss.sitter_id = $3
        and ss.service_id = $4`,
     [petId, ownerId, sitterId, serviceId]

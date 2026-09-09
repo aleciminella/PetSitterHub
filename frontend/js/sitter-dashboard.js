@@ -380,6 +380,18 @@ function formatDateForDisplay(value) {
     return new Date(`${date}T12:00:00`).toLocaleDateString("it-IT");
 }
 
+function renderHourOptions(selectedValue = "") {
+    const options = ['<option value="">Seleziona</option>'];
+
+    for (let hour = 0; hour < 24; hour += 1) {
+        const value = `${String(hour).padStart(2, "0")}:00`;
+        const selected = value === selectedValue ? "selected" : "";
+        options.push(`<option value="${value}" ${selected}>${value}</option>`);
+    }
+
+    return options.join("");
+}
+
 function renderWeeklyAvailability(weeklyAvailability) {
     $("#weeklyAvailabilityList").html(WEEK_DAYS.map(function (day) {
         const current = weeklyAvailability.find(function (item) {
@@ -396,8 +408,8 @@ function renderWeeklyAvailability(weeklyAvailability) {
                         <input class="form-check-input weekly-available-input" type="checkbox" ${checked}>
                         <span>Disponibile</span>
                     </label>
-                    <input class="form-control availability-time-input weekly-start-input" type="time" value="${formatTime(current.starts_at)}" ${disabled}>
-                    <input class="form-control availability-time-input weekly-end-input" type="time" value="${formatTime(current.ends_at)}" ${disabled}>
+                    <select class="form-select availability-time-input weekly-start-input" ${disabled}>${renderHourOptions(formatTime(current.starts_at))}</select>
+                    <select class="form-select availability-time-input weekly-end-input" ${disabled}>${renderHourOptions(formatTime(current.ends_at))}</select>
                 </div>
             </div>
         `;
@@ -910,6 +922,8 @@ $(document).ready(function () {
     loadAvailability();
     loadNotifications();
     loadSitterBookings();
+
+    $("#exceptionStartsAt, #exceptionEndsAt").html(renderHourOptions());
 
     $("#profileForm").on("submit", saveProfile);
     $("#petTypesForm").on("submit", savePetTypes);
