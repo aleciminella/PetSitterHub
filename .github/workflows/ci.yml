@@ -1,0 +1,66 @@
+name: Test automatici # Definisce il nome della pipeline che vedrai nell'interfaccia di GitHub nella scheda "Actions".
+
+# Dice a GitHub quando deve far partire questa procedura:
+on:
+  pull_request: # Ogni volta che viene aperta o aggiornata una Pull Request verso il ramo main.
+    branches: [main]
+  push: # Ogni volta che viene fatto un push diretto sul ramo main.
+    branches: [main]
+
+# Definisce un blocco di lavoro chiamato test-backend che verrà eseguito all'interno di una macchina virtuale Linux Ubuntu pulita fornita da GitHub
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    # Avvia un contenatore Docker con PostgreSQL 17 integrato nell'ambiente di test, creando un DB vuoto chiamato petsitterhub con utente e password dedicati, esposto sulla porta standard 5432
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: petsitterhub
+          POSTGRES_USER: petsitterhub
+          POSTGRES_PASSWORD: petsitterhub
+        ports:
+          - 5432:5432
+        
+        # Verifica che PostgreSQL sia totalmente pronto e operativo prima di procedere con gli step successivi (controlla ogni 5 secondi per un massimo di 10 tentativi).
+        options: >-
+          --health-cmd "pg_isready -U petsitterhub -d petsitterhub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Imposta le variabili d'ambiente necessarie all'applicazione backend per funzionare durante i test
+    env:
+      DATABASE_URL: postgres://petsitterhub:petsitterhub@127.0.0.1:5432/petsitterhub # Stringa di connessione al PostgreSQL appena avviato.
+      JWT_SECRET: ci-test-secret # Chiave fittizia per firmare e verificare i token JWT durante i test.
+      FRONTEND_ORIGIN: http://localhost:5500 # Origine consentita per il CORS
+
+    steps:
+      # Scarica il codice sorgente del progetto all'interno della macchina virtuale.
+      - name: Scarica il repository
+        uses: actions/checkout@v4
+
+      # Installa Node.js v24 nell'ambiente virtuale e abilita la cache dei pacchetti npm basandosi sul file package-lock.json per velocizzare i test futuri
+      - name: Configura Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Entra nella cartella backend ed esegue npm ci (Clean Install), un comando ottimizzato per le pipeline che installa esattamente le versioni dei pacchetti specificate nel package-lock.json.
+      - name: Installa le dipendenze
+        working-directory: backend
+        run: npm ci
+
+      # Inietta la struttura e i dati di base nel DB PostgreSQL temporaneo. Crea le tabelle e inserisce i dati finti iniziali
+      - name: Carica schema e dati demo
+        run: |
+          psql "$DATABASE_URL" -f database/schema.sql
+          psql "$DATABASE_URL" -f database/seed.sql
+
+      # Avvia il comando di test (npm test) all'interno della cartella backend. Se tutti gli assert passano, la build su GitHub diventa verde; se un test fallisce, la build diventa rossa.
+      - name: Esegue i test automatici
+        working-directory: backend
+        run: npm test
