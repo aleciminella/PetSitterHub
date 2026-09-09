@@ -195,9 +195,6 @@ function renderPets(pets) {
                     <p class="text-muted mb-0">${pet.notes || "Nessuna nota inserita."}</p>
                 </div>
                 <div class="d-flex gap-2 mt-3">
-                    <button class="btn btn-sm btn-outline-primary edit-pet-button" type="button" data-id="${pet.id}">
-                        Modifica
-                    </button>
                     <button class="btn btn-sm btn-outline-danger delete-pet-button" type="button" data-id="${pet.id}">
                         Elimina
                     </button>
@@ -225,10 +222,7 @@ function loadPets() {
 }
 
 function resetPetForm() {
-    $("#petId").val("");
     $("#petForm")[0].reset();
-    $("#savePetButton").text("Salva animale");
-    $("#cancelEditPetButton").addClass("d-none");
     clearPetsMessage();
 }
 
@@ -241,25 +235,6 @@ function getPetFormData() {
     };
 }
 
-function startPetEdit(petId) {
-    const pet = petsCache.find(function (item) {
-        return Number(item.id) === Number(petId);
-    });
-
-    if (!pet) {
-        return;
-    }
-
-    $("#petId").val(pet.id);
-    $("#petName").val(pet.name);
-    $("#petSpecies").val(pet.species);
-    $("#petBreed").val(pet.breed || "");
-    $("#petNotes").val(pet.notes || "");
-    $("#savePetButton").text("Salva modifiche");
-    $("#cancelEditPetButton").removeClass("d-none");
-    window.scrollTo({ top: $("#petForm").offset().top - 120, behavior: "smooth" });
-}
-
 function deletePet(petId) {
     $.ajax({
         url: `${API_BASE_URL}/pets/${petId}`,
@@ -269,8 +244,11 @@ function deletePet(petId) {
             resetPetForm();
             loadPets();
         },
-        error: function () {
-            showPetsMessage("danger", "Non è stato possibile eliminare l'animale.");
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.error
+                ? xhr.responseJSON.error
+                : "Non è stato possibile eliminare l'animale.";
+            showPetsMessage("danger", message);
         }
     });
 }
@@ -279,18 +257,14 @@ function savePet(event) {
     event.preventDefault();
     clearPetsMessage();
 
-    const petId = $("#petId").val();
-    const method = petId ? "PUT" : "POST";
-    const url = petId ? `${API_BASE_URL}/pets/${petId}` : `${API_BASE_URL}/pets`;
-
     $.ajax({
-        url,
-        method,
+        url: `${API_BASE_URL}/pets`,
+        method: "POST",
         headers: authHeaders(),
         contentType: "application/json",
         data: JSON.stringify(getPetFormData()),
         success: function () {
-            showPetsMessage("success", petId ? "Animale aggiornato correttamente." : "Animale aggiunto correttamente.");
+            showPetsMessage("success", "Animale aggiunto correttamente.");
             resetPetForm();
             loadPets();
         },
@@ -712,11 +686,6 @@ $(document).ready(function () {
     });
 
     $("#petForm").on("submit", savePet);
-    $("#cancelEditPetButton").on("click", resetPetForm);
-
-    $("#petsList").on("click", ".edit-pet-button", function () {
-        startPetEdit($(this).data("id"));
-    });
 
     $("#petsList").on("click", ".delete-pet-button", function () {
         deletePet($(this).data("id"));

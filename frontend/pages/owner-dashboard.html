@@ -63,7 +63,6 @@
             <div class="dashboard-panel">
                 <h2 class="h4 mb-3">Aggiungi animale</h2>
                 <form id="petForm" class="row g-3">
-                    <input type="hidden" id="petId">
                     <div class="col-12">
                         <label for="petName" class="form-label">Nome</label>
                         <input type="text" class="form-control" id="petName" required>
@@ -87,11 +86,8 @@
                         <label for="petNotes" class="form-label">Note</label>
                         <textarea class="form-control" id="petNotes" rows="4"></textarea>
                     </div>
-                    <div class="col-12 d-flex gap-2">
+                    <div class="col-12">
                         <button type="submit" class="btn btn-primary" id="savePetButton">Salva animale</button>
-                        <button type="button" class="btn btn-outline-secondary d-none" id="cancelEditPetButton">
-                            Annulla modifica
-                        </button>
                     </div>
                 </form>
             </div>

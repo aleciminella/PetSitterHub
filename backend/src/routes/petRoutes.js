@@ -8,7 +8,6 @@ const router = express.Router();
 // viene verificato il token e che si ha il ruolo owner
 router.get("/", verifyToken, requireRole("owner"), petController.listPets); // usato dal proprietario per vedere i suoi animali
 router.post("/", verifyToken, requireRole("owner"), petController.createPet); // usato dal proprietario per creare un animale
-router.put("/:id", verifyToken, requireRole("owner"), petController.updatePet); // usato dal proprietario per modificare animale
 router.delete("/:id", verifyToken, requireRole("owner"), petController.deletePet); // usato dal proprietario per eliminare animale
 
 module.exports = router;

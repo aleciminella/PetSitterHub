@@ -316,7 +316,7 @@ async function getMyAvailability(req, res, next) {
 }
 
 function isValidTime(value) {
-  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+  return typeof value === "string" && /^([01]\d|2[0-3]):00$/.test(value);
 }
 
 function cleanWeeklyAvailabilityItem(item) {
@@ -538,7 +538,30 @@ async function listSitters(req, res, next) {
     const { city, petType, service } = req.query;
 
     const values = [];
-    const conditions = ["u.role = 'sitter'", "u.is_active = true"];
+    const conditions = [
+      "u.role = 'sitter'",
+      "u.is_active = true",
+      `exists (
+         select 1
+         from sitter_services configured_service
+         where configured_service.sitter_id = sp.id
+       )`,
+      `(
+         exists (
+           select 1
+           from sitter_weekly_availability weekly
+           where weekly.sitter_id = sp.id
+             and weekly.is_available = true
+         )
+         or exists (
+           select 1
+           from sitter_availability_exceptions special
+           where special.sitter_id = sp.id
+             and special.is_available = true
+             and special.ends_on >= current_date
+         )
+       )`
+    ];
 
     if (city) {
       values.push(`%${city}%`);
