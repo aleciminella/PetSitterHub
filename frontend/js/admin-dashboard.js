@@ -287,8 +287,8 @@ function promoteUserToAdmin(userId) {
         method: "PATCH",
         headers: adminHeaders(),
         success: refreshAdminData,
-        error: function () {
-            alert("Errore durante la promozione dell'utente.");
+        error: function (xhr) {
+            alert(xhr.responseJSON?.error || "Errore durante la promozione dell'utente.");
         }
     });
 }

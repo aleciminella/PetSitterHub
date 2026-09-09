@@ -501,17 +501,20 @@ function saveWeeklyAvailability(event) {
     });
 }
 
-function saveAvailabilityExceptions() {
+function saveAvailabilityExceptions(exceptions, onSuccess) {
     $.ajax({
         url: `${API_BASE_URL}/sitters/me/availability/exceptions`,
         method: "PUT",
         headers: authHeaders(),
         contentType: "application/json",
         data: JSON.stringify({
-            exceptions: availabilityExceptions
+            exceptions
         }),
         success: function () {
             showMessage("#availabilityMessage", "success", "Chiusure e orari speciali salvati correttamente.");
+            if (onSuccess) {
+                onSuccess();
+            }
             loadAvailability();
         },
         error: function (xhr) {
@@ -535,6 +538,17 @@ function addAvailabilityException(event) {
         endsAt: isSpecial ? $("#exceptionEndsAt").val() : null,
         note: $("#exceptionNote").val()
     };
+
+    if (newException.endsOn < newException.startsOn) {
+        showMessage("#availabilityMessage", "danger", "La data finale non può essere precedente a quella iniziale.");
+        return;
+    }
+
+    if (isSpecial && (!newException.startsAt || !newException.endsAt || newException.endsAt <= newException.startsAt)) {
+        showMessage("#availabilityMessage", "danger", "L'orario di chiusura deve essere successivo a quello di apertura.");
+        return;
+    }
+
     const overlapsExisting = availabilityExceptions.some(function (exception) {
         return newException.startsOn <= exception.endsOn && newException.endsOn >= exception.startsOn;
     });
@@ -544,14 +558,17 @@ function addAvailabilityException(event) {
         return;
     }
 
-    availabilityExceptions.push(newException);
-    $("#exceptionForm")[0].reset();
-    saveAvailabilityExceptions();
+    saveAvailabilityExceptions([...availabilityExceptions, newException], function () {
+        $("#exceptionForm")[0].reset();
+        $("#exceptionType").trigger("change");
+    });
 }
 
 function removeAvailabilityException(index) {
-    availabilityExceptions.splice(index, 1);
-    saveAvailabilityExceptions();
+    const remainingExceptions = availabilityExceptions.filter(function (_, currentIndex) {
+        return currentIndex !== index;
+    });
+    saveAvailabilityExceptions(remainingExceptions);
 }
 
 function getBookingStatusLabel(status) {
@@ -976,7 +993,12 @@ $(document).ready(function () {
 
     $("#exceptionType").on("change", function () {
         const isSpecial = $(this).val() === "special";
-        $("#exceptionStartsAt, #exceptionEndsAt").prop("disabled", !isSpecial);
+        const timeFields = $("#exceptionStartsAt, #exceptionEndsAt");
+        timeFields.prop("disabled", !isSpecial);
+
+        if (!isSpecial) {
+            timeFields.val("");
+        }
     });
 
     $("#exceptionType").trigger("change");

@@ -76,3 +76,13 @@ Database: localhost:5432
 
 Se le API non caricano in manuale, controllare prima `http://localhost:4000/api/health/db`: se fallisce, PostgreSQL locale non è acceso o `DATABASE_URL` non corrisponde al proprio database.
 
+## Account demo
+
+Tutti gli account demo usano la password `password123`.
+
+| Ruolo | Email |
+| --- | --- |
+| Amministratore | `admin@petsitterhub.it` |
+| Proprietario | `mario.owner@example.com` |
+| Sitter | `giulia.sitter@example.com` |
+| Sitter | `luca.sitter@example.com` |
