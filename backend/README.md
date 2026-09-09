@@ -104,12 +104,22 @@ Nota: con Docker non viene usato il PostgreSQL locale, ma il database del contai
 
 I tre test automatici backend usano il test runner integrato di Node.js e controllano le API pubbliche, autenticazione e ruoli, quindi il flusso di una prenotazione dalla richiesta al pagamento.
 
-Prima di lanciarli deve essere raggiungibile il database indicato in `backend/.env`.
+Con PostgreSQL locale acceso e configurato in `backend/.env`:
 
 ```bash
 cd backend
 npm test
 ```
+
+Con il database Docker acceso sulla porta predefinita `5433`:
+
+```bash
+cd backend
+DATABASE_URL=postgres://petsitterhub:petsitterhub@127.0.0.1:5433/petsitterhub npm test
+```
+
+È necessario eseguire soltanto il comando relativo al database che si sta utilizzando.
+
 ## Verifiche
 
 Controllo server:
