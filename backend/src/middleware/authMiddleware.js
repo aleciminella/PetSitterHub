@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const pool = require("../db/pool");
 
 function getJwtSecret() { // ritorna chiave segreta del token, se non c'è nel file env blocca tutto con un errore
   if (!process.env.JWT_SECRET) {
@@ -22,8 +23,8 @@ function createToken(user) { // viene usata quando un utente fa login/registrazi
 }
 
 
-//middleware che si mette davanti alle rotte private
-function verifyToken(req, res, next) {
+// middleware che si mette davanti alle rotte private
+async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
   // Guarda se nella richiesta inviata dal browser c'è l'intestazione Authorization e se inizia con la dicitura Bearer (usata per convenzione)
@@ -35,13 +36,35 @@ function verifyToken(req, res, next) {
 
   const token = authHeader.replace("Bearer ", ""); // toglie Bearer per tenere solo il codice del token
 
+  let tokenUser;
+
   try {
-    req.user = jwt.verify(token, getJwtSecret()); // verifica se il token è autentico o se è stato manomesso/scaduto. Se è valido, estrae i dati dell'utente e li attacca direttamente alla richiesta: req.user
-    return next(); // lascia passare l'utente alla schermata successiva
-  } catch (err) { // Se il token è falso o scaduto, scatta il catch che risponde con errore 401
+    tokenUser = jwt.verify(token, getJwtSecret());
+  } catch (err) {
     return res.status(401).json({
       error: "Token non valido"
     });
+  }
+
+  try {
+    const result = await pool.query(
+      `select id, role
+       from users
+       where id = $1
+         and is_active = true`,
+      [tokenUser.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        error: "Account non attivo"
+      });
+    }
+
+    req.user = result.rows[0];
+    return next();
+  } catch (err) {
+    return next(err);
   }
 }
 

@@ -7,7 +7,7 @@ function showMessage(type, text) {
         .text(text);
 }
 
-function saveSession(response) {
+function saveSession(response) { // salva la sessione, mette user e token in localStorage
     localStorage.setItem("petsitterhubUser", JSON.stringify(response.user));
     localStorage.setItem("petsitterhubToken", response.token);
 }
@@ -18,7 +18,7 @@ function redirectToHome() {
     }, 800);
 }
 
-function setFormLoading(form, isLoading) {
+function setFormLoading(form, isLoading) { // Mentre il server sta elaborando la password, disattiva il pulsante e ci scrive sopra: "Attendere...".  Serve per evitare che un utente impaziente clicchi "Registrati" 5 volte di fila
     const button = form.find("button[type='submit']");
     const defaultText = button.data("default-text");
     button.prop("disabled", isLoading);
@@ -26,24 +26,24 @@ function setFormLoading(form, isLoading) {
 }
 
 $(document).ready(function () {
-    $("button[type='submit']").each(function () {
+    $("button[type='submit']").each(function () { // serve a memorizzare la scritta originale del pulsante prima di cambiarla in "Attendere...".
         $(this).data("default-text", $(this).text());
     });
 
-    $(".toggle-password-button").on("click", function () {
+    $(".toggle-password-button").on("click", function () { // occhio che mostra nasconde password
         const target = $($(this).data("target"));
         const isPassword = target.attr("type") === "password";
         target.attr("type", isPassword ? "text" : "password");
         $(this).attr("aria-label", isPassword ? "Nascondi password" : "Mostra password");
     });
 
-    $("#registerForm").on("submit", function (event) {
-        event.preventDefault();
+    $("#registerForm").on("submit", function (event) { // registrazione
+        event.preventDefault(); // blocca ricaricamento pagina
 
         const form = $(this);
-        setFormLoading(form, true);
+        setFormLoading(form, true); // Il pulsante diventa "Attendere..."
 
-        const userData = {
+        const userData = { // Raccoglie i dati
             firstName: $("#firstName").val(),
             lastName: $("#lastName").val(),
             email: $("#email").val(),
@@ -53,7 +53,7 @@ $(document).ready(function () {
             phone: $("#phone").val()
         };
 
-        $.ajax({
+        $.ajax({ // manda la chiamata al backend
             url: `${API_BASE_URL}/auth/register`,
             method: "POST",
             contentType: "application/json",
@@ -73,7 +73,7 @@ $(document).ready(function () {
         });
     });
 
-    $("#loginForm").on("submit", function (event) {
+    $("#loginForm").on("submit", function (event) { // login
         event.preventDefault();
 
         const form = $(this);

@@ -1,4 +1,4 @@
-process.env.TZ = process.env.TZ || "Europe/Rome";
+process.env.TZ = process.env.TZ || "Europe/Rome"; // Imposta l'orologio di Node.js sul fuso orario di Roma
 
 const express = require("express");
 const adminRoutes = require("./routes/adminRoutes");
@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const messageSummaryRoutes = require("./routes/messageSummaryRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const petRoutes = require("./routes/petRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
@@ -17,9 +18,9 @@ const app = express(); // crea l'oggetto principale dell'applicazione
 const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5500";
 
 app.use((req, res, next) => { // accetta dati da un'altra porta (i browser per motivi di sicurezza bloccano, CORS)
-  res.header("Access-Control-Allow-Origin", frontendOrigin);
+  res.header("Access-Control-Allow-Origin", frontendOrigin); // il frontend ha il permesso di leggere i dati.
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization"); //  Permette al frontend di inviare il token JWT
 
   if (req.method === "OPTIONS") { // Prima di mandare dati, i browser inviano una richiesta chiamata OPTIONS per chiedere se possono comunicare, il server risponde con 204 (procedi).
     return res.sendStatus(204);
@@ -28,7 +29,7 @@ app.use((req, res, next) => { // accetta dati da un'altra porta (i browser per m
   return next();
 });
 
-app.use(express.json({ limit: "5mb" })); // i dati viaggiano in formato json, imposta il limite a 5mb
+app.use(express.json({ limit: "5mb" })); // i dati viaggiano in formato json, imposta il limite a 5mb per le immagini
 
 
 // smistamento delle rotte (associa ad ogni indirizzo url il suo file dedicato)
@@ -37,7 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/bookings/:bookingId/messages", messageRoutes);
 app.use("/api/health", healthRoutes);
-app.use("/api/messages", messageRoutes);
+app.use("/api/messages", messageSummaryRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/pets", petRoutes);
 app.use("/api", paymentRoutes);

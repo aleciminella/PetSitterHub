@@ -90,7 +90,7 @@ function getAvailabilityForDate(dateKey, weekday, weeklyAvailability, exceptions
     return exception;
   }
 
-  return weeklyAvailability.find((item) => item.weekday === weekday); // se non trova nessuna eccezione, cerca nella tabella degli orari settimanali normali 
+  return weeklyAvailability.find((item) => item.weekday === weekday); // se non trova nessuna eccezione, cerca nella tabella degli orari settimanali normali
 }
 
 
@@ -148,7 +148,7 @@ async function matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt) { /
     const requestedStart = dateKey === toDateKey(start) ? start.getHours() * 60 + start.getMinutes() : availableStart; // se è il primo giorno prendi orario richiesto altrimenti quello di apertura
     const requestedEnd = dateKey === toDateKey(end) ? end.getHours() * 60 + end.getMinutes() : availableEnd;
 
-    return requestedStart >= availableStart && requestedEnd <= availableEnd; // verifica che se l'orario richiesto cade dentro l'rario di lavoro
+    return requestedStart >= availableStart && requestedEnd <= availableEnd; // verifica che se l'orario richiesto cade dentro l'orario di lavoro
   });
 }
 
@@ -176,7 +176,7 @@ async function findCompatibleSitterService(ownerId, petId, sitterId, serviceId) 
     [petId, ownerId, sitterId, serviceId]
   );
 
-  return result.rows[0] || null; // Se compatibile, restituisce il prezzo del sitter e la modalità del servizio per calcolare il totale, altrimenti restituisce null 
+  return result.rows[0] || null; // Se compatibile, restituisce il prezzo del sitter e la modalità del servizio per calcolare il totale, altrimenti restituisce null
 }
 
 
@@ -289,9 +289,9 @@ async function loadScheduleAndAcceptedBookings(sitterId, rangeStart, rangeEnd) {
 function slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, availabilityMode) {
   const conflictModes = getConflictAvailabilityModes(availabilityMode);
 
-  return acceptedBookings.some((booking) => (
-    conflictModes.includes(booking.availabilityMode)
-    && intervalsOverlap(slotStart, slotEnd, booking.startsAt, booking.endsAt)
+  return acceptedBookings.some((booking) => ( // .some() controlla le prenotazioni una alla volta e restituisce true appena ne trova almeno una incompatibile.
+    conflictModes.includes(booking.availabilityMode) // Verifica che la modalità della prenotazione accettata sia tra quelle che bloccano il servizio richiesto
+    && intervalsOverlap(slotStart, slotEnd, booking.startsAt, booking.endsAt) // Controlla che i due intervalli temporali si sovrappongano.
   ));
 }
 
@@ -301,33 +301,35 @@ async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMo
   const start = new Date(rangeStart);
   const end = new Date(rangeEnd);
   const now = new Date();
-  const mode = availabilityMode || "hourly_slot";
-  const { weeklyAvailability, exceptions, acceptedBookings } = await loadScheduleAndAcceptedBookings(
+  const mode = availabilityMode || "hourly_slot"; // Se non viene fornita una modalità, usa per sicurezza hourly_slot
+  const { weeklyAvailability, exceptions, acceptedBookings } = await loadScheduleAndAcceptedBookings( // carica dal database la disponibilità settimanale, le eventuali eccezioni e le prenotazioni accepted del sitter comprese nel periodo richiesto.
     sitterId,
     start,
     end
   );
 
-  const days = [];
+  const days = []; // contiene risultato finale
 
-  eachBookingDate(start, end).forEach((date) => {
-    const dateKey = toDateKey(date);
-    const availability = getAvailabilityForDate(dateKey, date.getDay(), weeklyAvailability, exceptions);
+  eachBookingDate(start, end).forEach((date) => { // per ogni giorno
+    const dateKey = toDateKey(date); // converte data nel formato adatto
+    const availability = getAvailabilityForDate(dateKey, date.getDay(), weeklyAvailability, exceptions); // decide quale disponibilità applicare: l'eccezione specifica, se presente, oppure il normale orario settimanale del sitter.
 
-    if (!availability || !availability.is_available) {
+    if (!availability || !availability.is_available) { // Se non esiste una configurazione oppure il sitter è chiuso, salta solamente quel giorno.
       return;
     }
 
+    // orari convertiti in minuti dalla mezzanotte
     const availableStart = toMinutes(availability.starts_at);
     const availableEnd = toMinutes(availability.ends_at);
-    const slots = [];
 
-    if (mode === "daily_exclusive" || mode === "daily_non_exclusive") {
+    const slots = []; // contiene intervalli disponibili della giornata
+
+    if (mode === "daily_exclusive" || mode === "daily_non_exclusive") { // Per un servizio giornaliero non vengono generate singole ore. L’intera giornata lavorativa rappresenta un solo intervallo
       const slotStart = atMinutes(date, availableStart);
       const slotEnd = atMinutes(date, availableEnd);
 
-      if (slotStart > now && !slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
-        slots.push({
+      if (slotStart > now && !slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) { // slotConflictsWithAccepted verifica se l'intervallo si sovrappone a una prenotazione accepted incompatibile.
+        slots.push({ // Aggiungi a slots
           startsAt: slotStart.toISOString(),
           endsAt: slotEnd.toISOString()
         });
@@ -337,7 +339,7 @@ async function listAvailableSlots(sitterId, rangeStart, rangeEnd, availabilityMo
         const slotStart = atMinutes(date, minutes);
         const slotEnd = atMinutes(date, minutes + SLOT_MINUTES);
 
-        if (slotStart > now && !slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) {
+        if (slotStart > now && !slotConflictsWithAccepted(slotStart, slotEnd, acceptedBookings, mode)) { // come per i servizi giornalieri viene controllata che lo slot di partenza sia successivo ad il momento attuale e che non si sovrapponga ad una prenotazione accepted incompatibile.
           slots.push({
             startsAt: slotStart.toISOString(),
             endsAt: slotEnd.toISOString()
@@ -402,7 +404,6 @@ async function hasAcceptedBookingOverlap(booking) {
 
 
 module.exports = {
-  ACTIVE_BOOKING_STATUSES,
   calculateTotalPrice,
   findCompatibleSitterService,
   getServiceAvailabilityMode,

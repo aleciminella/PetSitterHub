@@ -51,7 +51,9 @@ on conflict (email) do update set
   last_name = excluded.last_name,
   role = excluded.role,
   phone = excluded.phone,
-  city = excluded.city;
+  city = excluded.city,
+  is_active = true,
+  deleted_at = null;
 
 insert into pets (owner_id, name, species, breed, age, notes)
 select id, 'Luna', 'cane', 'Labrador', 4, 'Ama le passeggiate lunghe.'

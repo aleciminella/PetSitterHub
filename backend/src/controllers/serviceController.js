@@ -2,6 +2,10 @@ const pool = require("../db/pool");
 
 async function listServices(req, res, next) {
   try {
+    // Collega ogni servizio ai tipi di animali accettati.
+    // Di solito, facendo un JOIN, se il servizio "Pensione" vale per Cani e Gatti, il database ti restituirebbe 2 righe duplicate per lo stesso servizio. Invece, grazie a json_agg, PostgreSQL raggruppa gli animali in un vero e proprio array JSON (es: ["cane", "gatto"]).
+    // COALESCE dice: "Se il risultato di prima è vuoto (NULL), invece di scrivere NULL mettimi una lista vuota []
+    // raggruppa i dati per servizio in ordine alfabetico
     const result = await pool.query(
       `select
          s.id,

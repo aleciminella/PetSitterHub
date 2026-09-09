@@ -1,12 +1,9 @@
 const {
   getServiceAvailabilityMode,
-  hasAcceptedBookingOverlap,
-  hasInvalidDates,
-  listAvailableSlots,
-  matchesSitterAvailabilitySchedule
+  listAvailableSlots
 } = require("../services/bookingService");
 
-const MAX_SLOT_RANGE_DAYS = 31; // Tetto massimo: non si possono chiedere gli orari liberi per più di 31 giorni alla volta 
+const MAX_SLOT_RANGE_DAYS = 31; // Tetto massimo: non si possono chiedere gli orari liberi per più di 31 giorni alla volta
 
 function parseDateParam(value) { // Prende una data scritta come testo e la trasforma in un vero oggetto data che JavaScript può manipolare
   if (!value) {
@@ -26,40 +23,6 @@ function endOfDay(date) { // Questa funzione prende il giorno e sposta l'orologi
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 }
 
-
-
-
-async function checkSitterAvailability(req, res, next) {
-  try {
-    const { startsAt, endsAt, serviceId } = req.query;
-    const sitterId = req.params.sitterId;
-
-    if (!startsAt || !endsAt || hasInvalidDates(startsAt, endsAt)) {
-      return res.status(400).json({
-        error: "Date disponibilità non valide"
-      });
-    }
-
-    const availabilityMode = await getServiceAvailabilityMode(serviceId); 
-    const matchesSchedule = await matchesSitterAvailabilitySchedule(sitterId, startsAt, endsAt); // controlla che il sitter sia disponibile nelle date e ritorna true o false
-    const hasOverlap = await hasAcceptedBookingOverlap({
-      id: 0,
-      sitter_id: sitterId,
-      starts_at: startsAt,
-      ends_at: endsAt,
-      availability_mode: availabilityMode
-    });
-
-    return res.json({
-      available: matchesSchedule && !hasOverlap,
-      matchesSchedule,
-      hasAcceptedBookingOverlap: hasOverlap
-    });
-  } catch (err) {
-    return next(err);
-  }
-}
-
 async function listSitterAvailabilitySlots(req, res, next) {
   try {
     const sitterId = req.params.sitterId;
@@ -72,7 +35,7 @@ async function listSitterAvailabilitySlots(req, res, next) {
       });
     }
 
-    const rangeDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const rangeDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1; // calcola numero di giorni tra inizio e fine
 
     if (rangeDays > MAX_SLOT_RANGE_DAYS) {
       return res.status(400).json({
@@ -80,8 +43,8 @@ async function listSitterAvailabilitySlots(req, res, next) {
       });
     }
 
-    const availabilityMode = await getServiceAvailabilityMode(req.query.serviceId);
-    const days = await listAvailableSlots(sitterId, from, endOfDay(to), availabilityMode);
+    const availabilityMode = await getServiceAvailabilityMode(req.query.serviceId); // recupera la modalità del servizio richiesto: hourly_slot, fixed_slot, daily_exclusive oppure daily_non_exclusive.
+    const days = await listAvailableSlots(sitterId, from, endOfDay(to), availabilityMode); // coordina tutto il calcolo dei giorni e degli orari disponibili
 
     return res.json({
       days
@@ -92,6 +55,5 @@ async function listSitterAvailabilitySlots(req, res, next) {
 }
 
 module.exports = {
-  checkSitterAvailability,
   listSitterAvailabilitySlots
 };

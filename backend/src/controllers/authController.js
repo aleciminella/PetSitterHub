@@ -61,7 +61,8 @@ async function login(req, res, next) {
     const result = await pool.query(
       `select id, email, password_hash, first_name, last_name, role, phone, city, created_at
        from users
-       where email = $1`,
+       where email = $1
+         and is_active = true`,
       [email]
     );
 
@@ -91,16 +92,17 @@ async function login(req, res, next) {
   }
 }
 
-async function getProfile(req, res, next) { // usata per recuperare dati quando un utente è già loggato
+async function getProfile(req, res, next) {
   try {
     const result = await pool.query(
       `select id, email, first_name, last_name, role, phone, city, created_at
        from users
-       where id = $1`,
+       where id = $1
+         and is_active = true`,
       [req.user.id] // dal token
     );
 
-    if (result.rows.length === 0) { // messo per sicurezza (es. un amministratore ha cancellato un utente )
+    if (result.rows.length === 0) { // messo per sicurezza (es. un amministratore ha cancellato un utente)
       return res.status(404).json({
         error: "Utente non trovato"
       });

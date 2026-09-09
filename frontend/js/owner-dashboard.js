@@ -475,9 +475,9 @@ function payBooking(bookingId, method) {
         method: "POST",
         headers: authHeaders(),
         contentType: "application/json",
-        data: JSON.stringify({ method }),
+        data: JSON.stringify({ method }), // passo in data il metodo di pagamento utilizzato
         success: function () {
-            loadBookings();
+            loadBookings(); //  Ricarica la lista delle prenotazioni per aggiornare subito lo stato a schermo (es. da "IN ATTESA DI PAGAMENTO" a "PAGAMENTO EFFETTUATO" o "BONIFICO IN VERIFICA")
             loadNotifications();
         },
         error: function (xhr) {
@@ -627,20 +627,20 @@ function updateNotificationsControls(unreadCount, totalCount) {
 
 function loadNotifications(append = false) {
     if (!append) {
-        notificationsOffset = 0;
+        notificationsOffset = 0; // Il parametro append (di default false) dice se stiamo caricando la lista da capo o se stiamo aggiungendo nuove notifiche in fondo. Se append è false (cioè stiamo ricaricando da zero), azzera il contatore notificationsOffset = 0 per ripartire dalla prima notifica.
     }
 
     $.ajax({
-        url: `${API_BASE_URL}/notifications?limit=${NOTIFICATIONS_LIMIT}&offset=${notificationsOffset}`,
+        url: `${API_BASE_URL}/notifications?limit=${NOTIFICATIONS_LIMIT}&offset=${notificationsOffset}`, // chiede al massimo 3 notifiche alla volta. Offset: indica da quale punto della lista iniziare a scaricare (es. 0 per le prime 3, poi 3 per le successive, ecc.).
         method: "GET",
         headers: authHeaders(),
         success: function (response) {
             const notifications = response.notifications || [];
-            notificationsHasMore = notifications.length === NOTIFICATIONS_LIMIT;
-            notificationsOffset += notifications.length;
+            notificationsHasMore = notifications.length === NOTIFICATIONS_LIMIT; // Se la quantità di notifiche ricevute è pari al limite (3), significa che ce ne potrebbero essere altre nel DB, quindi imposta notificationsHasMore = true
+            notificationsOffset += notifications.length; // Aumenta notificationsOffset della quantità di notifiche appena scaricate
 
-            updateNotificationsControls(response.unreadCount || 0, notificationsOffset);
-            renderNotifications(notifications, append);
+            updateNotificationsControls(response.unreadCount || 0, notificationsOffset); // Passa il numero di notifiche non lette (unreadCount) alla funzione updateNotificationsControls per aggiornare il pallino rosso con il numero e mostrare/nascondere i pulsanti "Segna tutte come lette" ed "Elimina tutte".
+            renderNotifications(notifications, append); // Chiama renderNotifications per disegnare le notifiche a schermo nell'HTML.
         },
         error: function () {
             $("#ownerNotificationsList").html('<div class="empty-state text-danger">Errore durante il caricamento delle notifiche.</div>');
@@ -648,7 +648,7 @@ function loadNotifications(append = false) {
     });
 }
 
-function markNotificationAsRead(notificationId) {
+function markNotificationAsRead(notificationId) { // il server va a modificare il valore is_read della notifica con id passato. Dopo il success viene richiamata loadNotifications() per aggiornare
     $.ajax({
         url: `${API_BASE_URL}/notifications/${notificationId}/read`,
         method: "PATCH",
@@ -659,7 +659,7 @@ function markNotificationAsRead(notificationId) {
     });
 }
 
-function markAllNotificationsAsRead() {
+function markAllNotificationsAsRead() { // il server va a modificare il valore is_read in tutte
     $.ajax({
         url: `${API_BASE_URL}/notifications/read-all`,
         method: "PATCH",
@@ -670,24 +670,24 @@ function markAllNotificationsAsRead() {
     });
 }
 
-function deleteNotification(notificationId) {
+function deleteNotification(notificationId) { // il server elimina notifica con id
     $.ajax({
         url: `${API_BASE_URL}/notifications/${notificationId}`,
         method: "DELETE",
         headers: authHeaders(),
         success: function () {
-            loadNotifications();
+            loadNotifications(); // ricarica
         }
     });
 }
 
-function deleteAllNotifications() {
+function deleteAllNotifications() { // il server elimina tutte le notifiche
     $.ajax({
         url: `${API_BASE_URL}/notifications`,
         method: "DELETE",
         headers: authHeaders(),
         success: function () {
-            loadNotifications();
+            loadNotifications(); // ricarica
         }
     });
 }

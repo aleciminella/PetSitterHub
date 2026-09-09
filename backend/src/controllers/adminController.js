@@ -25,10 +25,10 @@ async function getOverview(req, res, next) {
   try {
     const result = await pool.query(
       `select
-         (select count(*)::integer from users) as total_users,
-         (select count(*)::integer from users where role = 'owner') as total_owners,
-         (select count(*)::integer from users where role = 'sitter') as total_sitters,
-         (select count(*)::integer from users where role = 'admin') as total_admins,
+         (select count(*)::integer from users where is_active = true) as total_users,
+         (select count(*)::integer from users where role = 'owner' and is_active = true) as total_owners,
+         (select count(*)::integer from users where role = 'sitter' and is_active = true) as total_sitters,
+         (select count(*)::integer from users where role = 'admin' and is_active = true) as total_admins,
          (select count(*)::integer from bookings) as total_bookings,
          (select count(*)::integer from bookings where status = 'pending') as pending_bookings,
          (select count(*)::integer from bookings where status = 'accepted') as accepted_bookings,
@@ -48,7 +48,7 @@ async function listUsers(req, res, next) {
   try {
     const pagination = getPagination(req.query);
     const values = [];
-    const conditions = [];
+    const conditions = ["u.is_active = true"];
 
     if (req.query.search) {
       values.push(`%${req.query.search}%`);
@@ -166,29 +166,121 @@ async function listReviews(req, res, next) {
 }
 
 async function deleteUser(req, res, next) {
+  const client = await pool.connect();
+
   try {
-    if (Number(req.params.id) === Number(req.user.id)) {
+    if (Number(req.params.id) === Number(req.user.id)) { // impedisce di cancellare account admin proprio
       return res.status(400).json({
         error: "Non puoi eliminare il tuo account admin"
       });
     }
 
-    const result = await pool.query(
-      `delete from users
+    await client.query("begin"); // Da questo momento in poi, esegui tutte le query successive come un unico blocco atomico
+
+
+    // Seleziona l'utente e "blocca" la riga (for update) sul DB per evitare che un'altra richiesta contemporanea la modifichi.
+    const userResult = await client.query(
+      `select id, role
+       from users
        where id = $1
-       returning id`,
+         and is_active = true
+       for update`,
       [req.params.id]
     );
 
-    if (result.rows.length === 0) {
+    // Se l'utente non esiste o è già inattivo (is_active = false), esegue il ROLLBACK e restituisce 404.
+    if (userResult.rows.length === 0) {
+      await client.query("rollback");
       return res.status(404).json({
         error: "Utente non trovato"
       });
     }
 
+    const targetUser = userResult.rows[0];
+
+
+    // Cerca tutte le prenotazioni in corso o future (pending o accepted) legate all'utente da eliminare
+    const bookingsResult = await client.query(
+      `select
+         b.id,
+         b.owner_id,
+         sp.user_id as sitter_user_id,
+         case
+           when b.owner_id = $1 then sp.user_id
+           else b.owner_id
+         end as counterpart_user_id
+       from bookings b
+       join sitter_profiles sp on sp.id = b.sitter_id
+       where (b.owner_id = $1 or sp.user_id = $1)
+         and b.status in ('pending', 'accepted')
+         and b.ends_at >= now()
+       for update of b`,
+      [req.params.id]
+    );
+
+    const bookingIds = bookingsResult.rows.map((booking) => booking.id);
+    let refundedBookingIds = [];
+
+
+    if (bookingIds.length > 0) {
+      await client.query( // Imposta lo stato delle prenotazioni su 'cancelled'
+        `update bookings
+         set status = 'cancelled', updated_at = now()
+         where id = any($1::bigint[])`,
+        [bookingIds]
+      );
+
+      const refundResult = await client.query( // Aggiorna lo stato dei pagamenti da 'paid' o 'authorized' a 'refunded'
+        `update payments
+         set status = 'refunded'
+         where booking_id = any($1::bigint[])
+           and status in ('authorized', 'paid')
+         returning booking_id`,
+        [bookingIds]
+      );
+      refundedBookingIds = refundResult.rows.map((payment) => String(payment.booking_id)); // Mantiene traccia di quali prenotazioni sono state rimborsate
+    }
+
+    // Invece di cancellare fisicamente la riga dal database, disattiva l'account impostando is_active = false e registra la data in deleted_at.
+    await client.query(
+      `update users
+       set is_active = false,
+           deleted_at = now()
+       where id = $1`,
+      [req.params.id]
+    );
+
+    // Cicla sulle prenotazioni annullate per avvisare la controparte
+    for (const booking of bookingsResult.rows) {
+      const refundText = refundedBookingIds.includes(String(booking.id))
+        ? " È stato avviato il rimborso sul metodo di pagamento utilizzato."
+        : ""; // Aggiunge il messaggio del rimborso solo se la prenotazione rientrava tra quelle con pagamento rimborsato
+      const removedRole = targetUser.role === "sitter" ? "sitter" : "proprietario";
+
+      await client.query(
+        `insert into notifications (user_id, booking_id, type, title, body)
+         select $1, $2, 'booking_cancelled', 'Prenotazione annullata', $3
+         where exists (
+           select 1
+           from users
+           where id = $1
+             and is_active = true
+         )`,
+        [
+          booking.counterpart_user_id,
+          booking.id,
+          `La prenotazione è stata annullata perché l'account del ${removedRole} è stato eliminato dall'amministrazione.${refundText}`
+        ]
+      );
+    }
+
+    await client.query("commit");
     return res.sendStatus(204);
   } catch (err) {
+    await client.query("rollback");
     return next(err);
+  } finally {
+    client.release();
   }
 }
 
@@ -198,6 +290,7 @@ async function promoteUserToAdmin(req, res, next) {
       `update users
        set role = 'admin'
        where id = $1
+         and is_active = true
        returning id, email, first_name, last_name, role, phone, city, created_at`,
       [req.params.id]
     );
@@ -227,10 +320,13 @@ async function updateSitterVerification(req, res, next) {
     }
 
     const result = await pool.query(
-      `update sitter_profiles
+      `update sitter_profiles sp
        set verified = $1
-       where id = $2
-       returning id, user_id, bio, base_city, verified, created_at`,
+       from users u
+       where sp.id = $2
+         and u.id = sp.user_id
+         and u.is_active = true
+       returning sp.id, sp.user_id, sp.bio, sp.base_city, sp.verified, sp.created_at`,
       [verified, req.params.id]
     );
 

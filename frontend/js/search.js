@@ -3,23 +3,23 @@ const API_BASE_URL = "http://localhost:4000/api";
 let allServices = [];
 let ownerPets = [];
 let availabilityDays = [];
-let selectedBookingDraft = null;
+let selectedBookingDraft = null; //  bozza temporanea della prenotazione
 
-function getToken() {
+function getToken() { // prende token da localStorage
     return localStorage.getItem("petsitterhubToken");
 }
 
-function getUser() {
+function getUser() {  // prende user da localStorage
     const savedUser = localStorage.getItem("petsitterhubUser");
     return savedUser ? JSON.parse(savedUser) : null;
 }
 
-function authHeaders() {
+function authHeaders() { // Prepara l'intestazione Authorization: Bearer ... se sei loggato.
     const token = getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function apiRequest(path, options = {}) {
+function apiRequest(path, options = {}) { // manda richieste AJAX al backend con gli header giusti e il JSON formattato.
     return $.ajax({
         url: `${API_BASE_URL}${path}`,
         method: options.method || "GET",
@@ -33,14 +33,19 @@ function apiRequest(path, options = {}) {
     });
 }
 
-function formatMoney(value) {
+
+
+
+
+// Formattatori estetici:
+function formatMoney(value) { // Trasforma un numero in euro
     return new Intl.NumberFormat("it-IT", {
         style: "currency",
         currency: "EUR"
     }).format(Number(value || 0));
 }
 
-function petTypeLabel(petType) {
+function petTypeLabel(petType) { // Mette la maiuscola
     const labels = {
         cane: "Cane",
         gatto: "Gatto",
@@ -52,7 +57,7 @@ function petTypeLabel(petType) {
     return labels[petType] || petType;
 }
 
-function priceUnitText(priceUnit) {
+function priceUnitText(priceUnit) { // Scrive tariffa
     const labels = {
         hourly: "tariffa oraria",
         daily: "tariffa giornaliera",
@@ -62,37 +67,11 @@ function priceUnitText(priceUnit) {
     return labels[priceUnit] || "tariffa";
 }
 
-function getInitials(firstName, lastName) {
+function getInitials(firstName, lastName) { // prende le iniziali per i sitter che non hanno foto profilo
     return `${(firstName || "").charAt(0)}${(lastName || "").charAt(0)}`.toUpperCase();
 }
 
-function currentUserIsOwner() {
-    const user = getUser();
-    return Boolean(user && user.role === "owner" && getToken());
-}
-
-function uniqueValues(values) {
-    return [...new Set(values.filter(Boolean))];
-}
-
-function formatDateForInput(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-}
-
-function formatDateLabel(dateValue) {
-    return new Date(`${dateValue}T12:00:00`).toLocaleDateString("it-IT", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-    });
-}
-
-function formatSlotTime(value) {
+function formatSlotTime(value) { // formatta ora per italia
     return new Date(value).toLocaleTimeString("it-IT", {
         hour: "2-digit",
         minute: "2-digit",
@@ -101,7 +80,7 @@ function formatSlotTime(value) {
     });
 }
 
-function formatBookingDateTime(value) {
+function formatBookingDateTime(value) { // formatta data per l'italia
     return new Date(value).toLocaleString("it-IT", {
         day: "2-digit",
         month: "2-digit",
@@ -112,6 +91,39 @@ function formatBookingDateTime(value) {
         timeZone: "Europe/Rome"
     });
 }
+
+
+function formatDateForInput(date) { // Prende una data e la trasforma nel formato standard internazionale dei computer: ANNO-MESE-GIORNO
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function formatDateLabel(dateValue) { // Prende la stringa del computer e la trasforma in una scritta bella e leggibile per una persona italiana
+    return new Date(`${dateValue}T12:00:00`).toLocaleDateString("it-IT", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+    });
+}
+
+
+
+
+
+
+function currentUserIsOwner() { // Restituisce true se chi naviga è un proprietario con token valido.
+    const user = getUser();
+    return Boolean(user && user.role === "owner" && getToken());
+}
+
+function uniqueValues(values) {
+    return [...new Set(values.filter(Boolean))];
+}
+
 
 function bookingPeriodText(priceUnit, startsAt, endsAt) {
     if (priceUnit === "fixed") {
@@ -142,7 +154,7 @@ function nextDateValues(days = 45) {
     return dates;
 }
 
-function renderAvatar(sitter) {
+function renderAvatar(sitter) { // crea immagine profilo sitter (se non è stata messa mette iniziali di default)
     if (sitter.profile_image_url) {
         return `<div class="sitter-avatar sitter-avatar-image" style="background-image: url('${sitter.profile_image_url}')"></div>`;
     }
@@ -270,8 +282,8 @@ function renderServicePanel(sitter, petType, services, active) {
     `;
 }
 
-function renderSitterServices(sitter) {
-    const groups = groupServicesByPetType(visibleServicesForSitter(sitter));
+function renderSitterServices(sitter) { // Disegna i pulsanti di selezione (cane, gatto ecc)
+    const groups = groupServicesByPetType(visibleServicesForSitter(sitter)); // prende i servizi del sitter e li divide in scatoloni
     const petTypes = Object.keys(groups);
 
     if (!petTypes.length) {
@@ -289,12 +301,12 @@ function renderSitterServices(sitter) {
             }).join("")}
         </div>
         ${petTypes.map(function (petType, index) {
-            return renderServicePanel(sitter, petType, groups[petType], index === 0);
+            return renderServicePanel(sitter, petType, groups[petType], index === 0); //disegna le righe con il nome servizio, prezzo e pulsante prenota
         }).join("")}
     `;
 }
 
-function renderSitters(sitters) {
+function renderSitters(sitters) { // prende la lista dei sitter appena arrivata dal server e costruisce fisicamente i riquadri bianchi sullo schermo.
     const minRating = Number($("#minRating").val() || 0);
     const filteredSitters = minRating
         ? sitters.filter((sitter) => Number(sitter.average_rating || 0) >= minRating && sitterMatchesCurrentOwnerPets(sitter))
@@ -309,7 +321,7 @@ function renderSitters(sitters) {
         return;
     }
 
-    $("#sittersList").html(filteredSitters.map(function (sitter) {
+    $("#sittersList").html(filteredSitters.map(function (sitter) { // renderAvatar per foto profilo
         return `
             <div class="col-md-6 col-xl-4">
                 <article class="sitter-card h-100">
@@ -380,7 +392,7 @@ function renderServiceOptions(availableServices) {
 }
 
 function syncFilterOptions(changedFilter) {
-    if (currentUserIsOwner()) {
+    if (currentUserIsOwner()) { // Controlla se l'utente che sta guardando la pagina è un proprietario già loggato.
         syncOwnerFilterOptions();
         return;
     }
@@ -404,7 +416,7 @@ function syncFilterOptions(changedFilter) {
     renderPetTypeOptions(petTypes);
     renderServiceOptions(services);
 
-    if (selectedPetType && petTypes.includes(selectedPetType)) {
+    if (selectedPetType && petTypes.includes(selectedPetType)) { // il browser di default si resetta e torna sulla prima voce in alto, così si rimette il valore selezionato
         $("#petType").val(selectedPetType);
     }
 
@@ -413,7 +425,7 @@ function syncFilterOptions(changedFilter) {
     }
 }
 
-function syncOwnerFilterOptions() {
+function syncOwnerFilterOptions() { // se proprietario mostra direttamente i nomi dei suoi animali
     const selectedPet = selectedOwnerPet();
     const selectedPetType = selectedPet ? selectedPet.species : "";
     const allowedPetTypes = selectedPetType ? [selectedPetType] : ownerPetTypes();
@@ -425,7 +437,7 @@ function syncOwnerFilterOptions() {
     renderServiceOptions(availableServices);
 }
 
-function currentFilters() {
+function currentFilters() { // Raccoglie ciò che c'è scritto al momento nei campi del form di ricerca
     const filters = {
         city: $("#city").val(),
         service: $("#service").val()
@@ -448,14 +460,14 @@ function showMissingPetsMessage() {
     `);
 }
 
-function loadServices() {
-    return $.get(`${API_BASE_URL}/services`, function (response) {
-        allServices = response.services || [];
-        syncFilterOptions();
+function loadServices() { // Scarica il catalogo generale dei servizi dal backend (GET /services).
+    return $.get(`${API_BASE_URL}/services`, function (response) { // scarica servizi dal server
+        allServices = response.services || []; // Li salva in memoria
+        syncFilterOptions(); // per farli comparire nel menu a tendina sullo schermo
     });
 }
 
-function loadOwnerPets() {
+function loadOwnerPets() { // Se sei un proprietario, scarica i tuoi animali (GET /pets). Se non ne hai, ti mostra l'avviso rosso showMissingPetsMessage().
     return apiRequest("/pets").done(function (response) {
         ownerPets = response.pets || [];
 
@@ -472,7 +484,7 @@ function loadOwnerPets() {
     });
 }
 
-function loadSitters(filters = {}) {
+function loadSitters(filters = {}) { // Chiama GET /sitters passando i filtri.
     $("#sittersList").html(`
         <div class="col-12">
             <div class="empty-state">Caricamento sitter...</div>
@@ -480,7 +492,7 @@ function loadSitters(filters = {}) {
     `);
 
     $.get(`${API_BASE_URL}/sitters`, filters, function (response) {
-        renderSitters(response.sitters || []);
+        renderSitters(response.sitters || []); // disegna card a schermo
     }).fail(function () {
         $("#sittersList").html(`
             <div class="col-12">
@@ -567,8 +579,8 @@ function consecutiveDailyEndDates(startDate) {
     return dates;
 }
 
-function renderHourlyTimes() {
-    const date = $("#bookingDate").val();
+function renderHourlyTimes() { // riempe i menu a tendina
+    const date = $("#bookingDate").val(); // Guarda quale giorno hai scelto nel menu #bookingDate
     const day = availabilityDays.find((item) => item.date === date);
     const slots = day ? day.slots : [];
 
@@ -586,7 +598,7 @@ function renderHourlyTimes() {
     renderEndTimeOptions();
 }
 
-function renderEndTimeOptions() {
+function renderEndTimeOptions() { // Guarda quale ora di inizio hai appena selezionato e prende automaticamente l'ora di fine di quello slot e la inserisce nel menu dell'ora di fine (#bookingEndTime). Infine lancia la sincronizzazione e il preventivo.
     const startsAt = $("#bookingStartTime").val();
     const date = $("#bookingDate").val();
     const day = availabilityDays.find((item) => item.date === date);
@@ -607,7 +619,8 @@ function renderEndTimeOptions() {
     checkAvailabilityAndQuote();
 }
 
-function syncBookingDateTimes() {
+function syncBookingDateTimes() { // Nel form HTML ci sono due caselle nascoste (#bookingStart e #bookingEnd) che l'utente non vede con gli occhi. Questa funzione prende le scelte fatte nei menu (sia che siano a ore, sia che siano a giorni) e scrive la data e l'ora complete in formato ISO internazionale dentro a questi due campi nascosti, pronte per essere spedite al server.
+
     if (selectedBookingDraft.priceUnit === "daily") {
         syncDailyDatesFromSelectedSlots();
         return;
@@ -620,7 +633,7 @@ function syncBookingDateTimes() {
     $("#bookingEnd").val(endsAt || "");
 }
 
-function renderDailyEndDates() {
+function renderDailyEndDates() { // riempe il menu a tendina
     const startDate = $("#bookingStartDateDaily").val();
     const dates = startDate ? consecutiveDailyEndDates(startDate) : availabilityDays.map((day) => day.date);
 
@@ -630,47 +643,49 @@ function renderDailyEndDates() {
     checkAvailabilityAndQuote();
 }
 
-function renderBookingDates() {
+function renderBookingDates() {  // prende la lista grezza delle date e decidere su quali menù a tendina versarla.
     const dates = availabilityDays.map((day) => day.date);
 
-    if (selectedBookingDraft.priceUnit === "daily") {
-        renderDateOptions("#bookingStartDateDaily", dates);
-        renderDailyEndDates();
+    if (selectedBookingDraft.priceUnit === "daily") { // se è a giorni chiama renderDailyEndDates() per attivare i menu delle date di inizio e fine soggiorno
+        renderDateOptions("#bookingStartDateDaily", dates); // Prende le date e le inserisce dentro al menù a tendina della data di inizio soggiorno
+        renderDailyEndDates(); // Chiama subito la funzione che calcola e popola il menù della data di fine soggiorno (mostrando solo date consecutive senza ferie in mezzo).
         return;
     }
 
-    renderDateOptions("#bookingDate", dates);
-    renderHourlyTimes();
+    // se ad ore
+    renderDateOptions("#bookingDate", dates); // Prende le date e le inserisce dentro al menù a tendina della data.
+    renderHourlyTimes(); // per la data scelta va a spescare gli slot liberi e popola orario di inizio e di fine
 }
 
-function loadAvailabilitySlots() {
-    const from = formatDateForInput(new Date());
+function loadAvailabilitySlots() { // chiede al backend orari di disponibilità
+    const from = formatDateForInput(new Date()); // Data di OGGI
     const toDate = new Date();
     toDate.setDate(toDate.getDate() + 30);
-    const to = formatDateForInput(toDate);
+    const to = formatDateForInput(toDate); // data fra 30 giorni
 
-    setBookingSubmitDisabled(true);
-    availabilityDays = [];
+    setBookingSubmitDisabled(true); // mette il lucchetto al tasto Invia
+    availabilityDays = []; // Svuota il cassetto degli orari
 
     apiRequest(`/sitters/${selectedBookingDraft.sitterId}/availability/slots?from=${from}&to=${to}&serviceId=${selectedBookingDraft.serviceId}`)
         .done(function (response) {
-            availabilityDays = response.days || [];
+            availabilityDays = response.days || []; // salva i giorni nel cassetto
 
-            if (!availabilityDays.length) {
+            if (!availabilityDays.length) { // se non ha nessuna disponibilità fa return
                 showBookingMessage("Nessuna data disponibile per questo servizio.");
                 return;
             }
 
-            renderBookingDates();
+            renderBookingDates(); // se ci sono giorni liberi esegui renderBookingDates()
         })
         .fail(function (xhr) {
             showBookingMessage(xhr.responseJSON?.error || "Disponibilità non caricata.");
         });
 }
 
-function checkAvailabilityAndQuote() {
+function checkAvailabilityAndQuote() { // serve per calcolare un preventivo in tempo reale e verificare la disponibilità del sitter prima che l'utente invii una richiesta di prenotazione
     const petId = $("#bookingPet").val();
 
+    // Sincronizza le date, cancella eventuali messaggi di errore precedenti e azzera il preventivo visibile nell'interfaccia.
     syncBookingDateTimes();
     clearBookingMessage();
     resetBookingQuote();
@@ -678,20 +693,20 @@ function checkAvailabilityAndQuote() {
     const startsAt = $("#bookingStart").val();
     const endsAt = $("#bookingEnd").val();
 
-    if (!selectedBookingDraft || !petId || !startsAt || !endsAt) {
+    if (!selectedBookingDraft || !petId || !startsAt || !endsAt) { // se manca qualcosa si interrompe
         setBookingSubmitDisabled(true);
         return;
     }
 
-    if (new Date(startsAt) >= new Date(endsAt)) {
+    if (new Date(startsAt) >= new Date(endsAt)) { // data di fine deve essere successiva a quella di inizio
         showBookingMessage("La data di fine deve essere successiva alla data di inizio.");
         setBookingSubmitDisabled(true);
         return;
     }
 
-    setBookingSubmitDisabled(true);
+    setBookingSubmitDisabled(true); // Disabilita temporaneamente il pulsante di conferma per evitare doppi invii.
 
-    apiRequest("/bookings/quote", {
+    apiRequest("/bookings/quote", { // chiamata per verificare che il sitter è libero e calcolare prezzi
         method: "POST",
         body: {
             petId,
@@ -700,7 +715,7 @@ function checkAvailabilityAndQuote() {
             startsAt,
             endsAt
         }
-    }).done(function (response) {
+    }).done(function (response) { // Se il server risponde con successo aggiorna l'interfaccia
         const quote = response.quote;
 
         $("#bookingServiceLabel").text(`${quote.serviceName} per ${petTypeLabel(quote.petType)}`);
@@ -715,7 +730,7 @@ function checkAvailabilityAndQuote() {
     });
 }
 
-function syncDailyDatesFromSelectedSlots() {
+function syncDailyDatesFromSelectedSlots() { // aiutante di syncBookingDateTimes per i servizi a giorni: prende l'orario di apertura del primo giorno del soggiorno e l'orario di chiusura dell'ultimo giorno e li unisce
     const startDate = $("#bookingStartDateDaily").val();
     const endDate = $("#bookingEndDateDaily").val();
     const startDay = availabilityDays.find((day) => day.date === startDate);
@@ -732,62 +747,64 @@ function syncDailyDatesFromSelectedSlots() {
 }
 
 function openBookingModal(button) {
-    saveBookingDraft(button);
+    saveBookingDraft(button); // salva temporaneamente i dati del sitter e del servizio cliccato in selectedBookingDraft
 
-    if (!getToken()) {
+    if (!getToken()) { // se non si ha token si viene reindirizzati alla pagina di login
         window.location.href = "pages/login.html";
         return;
     }
 
-    if (!currentUserIsOwner()) {
+    if (!currentUserIsOwner()) { // se si è loggati ma non come proprietario manda il seguente alert
         alert("Solo un proprietario può prenotare un servizio.");
         return;
     }
 
-    if (!ownerPets.length) {
+    if (!ownerPets.length) { // controlla se ci sono animali registrati. Controllo di sicurezza due finestre (se nella seconda elimino l'animale e nella prima non aggiorno e schiaccio prenota va in crash)
         showMissingPetsMessage();
         return;
     }
 
-    const compatiblePets = ownerPets.filter((pet) => pet.species === selectedBookingDraft.petType);
+    const compatiblePets = ownerPets.filter((pet) => pet.species === selectedBookingDraft.petType); // controlla che gli animali sono compatibili
 
     if (!compatiblePets.length) {
         alert(`Non hai animali compatibili con ${selectedBookingDraft.serviceName}.`);
         return;
     }
 
-    $("#bookingForm")[0].reset();
-    clearBookingMessage();
-    renderBookingPetOptions();
-    $("#bookingSummary").text(`${selectedBookingDraft.serviceName} con ${selectedBookingDraft.sitterName} - ${priceUnitText(selectedBookingDraft.priceUnit)}`);
-    resetBookingQuote();
-    setBookingSubmitDisabled(true);
+    $("#bookingForm")[0].reset(); // Svuota tutti i campi del modulo
+    clearBookingMessage(); // Nasconde eventuali strisce gialle di errore rimaste aperte
+    renderBookingPetOptions(); // Riempie il menu a tendina degli animali solo con i tuoi animali compatibili
+    $("#bookingSummary").text(`${selectedBookingDraft.serviceName} con ${selectedBookingDraft.sitterName} - ${priceUnitText(selectedBookingDraft.priceUnit)}`); // Scrive il titoletto riepilogativo in alto
+    resetBookingQuote(); // Rimette il prezzo a -- (in attesa che venga scelta la data).
+    setBookingSubmitDisabled(true); //  Mette il lucchetto sul pulsante "Invia richiesta". Non si può inviare finché non scegli le date e il prezzo non è calcolato
 
     if (selectedBookingDraft.priceUnit === "daily") {
+        // se il servizio è giornaliero nasconde le ore e mostra data inizio e fine
         $("#bookingHourlySection").addClass("d-none");
         $("#bookingDailySection").removeClass("d-none");
     } else {
+        // se il servizio è orario nascondi data di fine e mostra ore
         $("#bookingDailySection").addClass("d-none");
         $("#bookingHourlySection").removeClass("d-none");
-        $("#bookingEndTimeGroup").toggleClass("d-none", selectedBookingDraft.priceUnit === "fixed");
+        $("#bookingEndTimeGroup").toggleClass("d-none", selectedBookingDraft.priceUnit === "fixed"); // nasconde orario di fine
     }
 
-    loadAvailabilitySlots();
-    bootstrap.Modal.getOrCreateInstance(document.getElementById("bookingModal")).show();
+    loadAvailabilitySlots(); // fa chiamata GET /api/sitters/:id/availability/slots per farsi mandare i 30 giorni di disponibilità e popolare. Guarda nella dichiarazione.
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("bookingModal")).show(); // mostra il modal prenotazione
 }
 
 function showReviews(sitterId, sitterName) {
     $("#reviewsModalTitle").text(`Recensioni di ${sitterName}`);
     $("#reviewsModalBody").html('<p class="text-muted mb-0">Caricamento recensioni...</p>');
-    bootstrap.Modal.getOrCreateInstance(document.getElementById("reviewsModal")).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("reviewsModal")).show(); // mostra modal recensioni
 
-    $.get(`${API_BASE_URL}/sitters/${sitterId}/reviews`, function (response) {
+    $.get(`${API_BASE_URL}/sitters/${sitterId}/reviews`, function (response) { // Chiamata api GET /api/sitters/:id/reviews
         if (!response.reviews.length) {
             $("#reviewsModalBody").html('<p class="text-muted mb-0">Nessuna recensione disponibile.</p>');
             return;
         }
 
-        $("#reviewsModalBody").html(response.reviews.map(function (review) {
+        $("#reviewsModalBody").html(response.reviews.map(function (review) { // per ogni review crea questo
             return `
                 <article class="review-item">
                     <div class="d-flex justify-content-between gap-3">
@@ -804,45 +821,56 @@ function showReviews(sitterId, sitterName) {
     });
 }
 
-$(document).ready(function () {
-    $.when(loadServices()).always(function () {
-        if (currentUserIsOwner()) {
-            loadOwnerPets();
+
+
+
+$(document).ready(function () { // interruttore che fa partire tutto
+
+    // Sezione che prepara i 4 menu a tendina
+
+    // Aspetta che il server abbia finito di scaricare i servizi prima di provare a mostrare i sitter,
+    $.when(loadServices()).always(function () { // loadService() usa api GET/api/services che restituisce tutti i servizi esistenti e li salva in allServices. Chiama poi syncFilterOptions() che a sua volta chiama renderPetTypeOptions() e renderServiceOptions() per inserire nel filtro le opzioni per servizi e animali
+        if (currentUserIsOwner()) { // se lo user è loggato come proprietario
+            loadOwnerPets(); // usa api GET/api/pets (animali del proprietario): se non hai animali restituisce avviso rosso tramite showMissingPetsMessage(), se invece li hai chiama syncOwnerFilterOptions() il quale aggiunge nel filtro come opzioni per animali quelli in suo possesso e i servizi compatibili con l'animale selezionato attraverso i metodi renderOwnerPetOptions() e renderServiceOptions().
+            // quando syncOwnerFilterOptions() ha finito loadOwnerPets() chiama loadSitters(filtri)
         } else {
-            loadSitters();
+            loadSitters(); // se non è un proprietario esegue loadSitters(). Esegue chiamata api GET /api/sitters che restituisce i sitter disponibili in base ai filtri passati (possono anche non esserci). Dopo aver fatto chiama rendersSitter() che disegna schede a schermo.
         }
     });
 
     $("#searchForm").on("submit", function (event) {
-        event.preventDefault();
+        event.preventDefault(); // non riaggiornare la pagina
 
-        if (currentUserIsOwner() && !ownerPets.length) {
+        if (currentUserIsOwner() && !ownerPets.length) { // se sei un proprietario e non hai animali registrati restituisci messaggio errore
             showMissingPetsMessage();
             return;
         }
 
-        loadSitters(currentFilters());
+        loadSitters(currentFilters()); // restituisci sitter
     });
 
     $("#resetFilters").on("click", function () {
-        $("#searchForm")[0].reset();
+        $("#searchForm")[0].reset(); // svuota tutte le caselle
 
-        if (currentUserIsOwner()) {
+        if (currentUserIsOwner()) { // se sei un proprietario vengono riaggiunti animali in posesso
             loadOwnerPets();
             return;
         }
 
-        syncFilterOptions();
-        loadSitters();
+        syncFilterOptions(); // se non sei un proprietario chiama syncFilterOptions per ripristinare servizi originali
+        loadSitters(); // restituisci sitter
     });
 
+
+
+    // quando vengono modificati valori pet, services e rating nel filtro riaggiorna chiamando loadSitters
     $("#petType").on("change", function () {
-        syncFilterOptions("pet");
+        syncFilterOptions("pet"); // adatta i servizi del filtro e con renderPetTypeOptions() e renderServiceOptions() ridisegna i menù a tendina
         loadSitters(currentFilters());
     });
 
     $("#service").on("change", function () {
-        syncFilterOptions("service");
+        syncFilterOptions("service"); // adatta gli animali del filtro
         loadSitters(currentFilters());
     });
 
@@ -850,7 +878,9 @@ $(document).ready(function () {
         loadSitters(currentFilters());
     });
 
-    $("#sittersList").on("click", ".sitter-pet-tab", function () {
+
+
+    $("#sittersList").on("click", ".sitter-pet-tab", function () { // quando schiaccio su un tab (es. gatto) aggiunge clausola d-none (nascondi) ai servizi di un altro tab (es. cane) e toglie d-none a quelli del gatto. La scheda cambia contenuto senza ricaricare pagina
         const button = $(this);
         const card = button.closest(".sitter-card");
         const petType = button.data("pet-type");
@@ -861,38 +891,42 @@ $(document).ready(function () {
         card.find(`.sitter-service-panel[data-pet-type="${petType}"]`).removeClass("d-none");
     });
 
-    $("#sittersList").on("click", ".book-service", function () {
-        openBookingModal($(this));
+
+    $("#sittersList").on("click", ".book-service", function () { // quando si schiaccia un pulsante prenota si esegue openBookingModal()
+        openBookingModal($(this)); // guardare nella dichiarazione
     });
 
     $("#sittersList").on("click", ".show-reviews", function () {
         showReviews($(this).data("sitter-id"), $(this).data("sitter-name"));
     });
 
-    $("#bookingPet").on("change", checkAvailabilityAndQuote);
-    $("#bookingDate").on("change", function () {
+
+
+    $("#bookingPet").on("change", checkAvailabilityAndQuote); // Se cambi animale: ricalcola subito il preventivo
+    $("#bookingDate").on("change", function () { // Se cambi la data: chiama subito renderHourlyTimes() per aggiornare il menu con gli orari liberi di quel nuovo giorno
         renderHourlyTimes();
     });
-    $("#bookingStartTime").on("change", renderEndTimeOptions);
-    $("#bookingEndTime").on("change", checkAvailabilityAndQuote);
-    $("#bookingStartDateDaily").on("change", renderDailyEndDates);
-    $("#bookingEndDateDaily").on("change", checkAvailabilityAndQuote);
+    $("#bookingStartTime").on("change", renderEndTimeOptions); // Se cambi l'Ora di Inizio chiama subito renderEndTimeOptions per spostare in automatico anche l'Ora di Fine
+    $("#bookingEndTime").on("change", checkAvailabilityAndQuote); // Se cambi orario di fine ricalcola subito il prezzo totale in euro. Al momento non utilizzato poichè possibili prenotazioni di solo un'ora
+    $("#bookingStartDateDaily").on("change", renderDailyEndDates); // se cambi la Data di Inizio, ricalcola le Date di Fine consecutive disponibili
+    $("#bookingEndDateDaily").on("change", checkAvailabilityAndQuote); // se cambi la Data di Fine, ricalcola il prezzo per i giorni scelti!
+
 
     $("#bookingForm").on("submit", function (event) {
-        event.preventDefault();
+        event.preventDefault(); // Non ricaricare la pagina
 
         const petId = $("#bookingPet").val();
         const startsAt = $("#bookingStart").val();
         const endsAt = $("#bookingEnd").val();
 
-        clearBookingMessage();
+        clearBookingMessage(); // Nasconde vecchi messaggi di errore
 
         if (!selectedBookingDraft || !petId || !startsAt || !endsAt) {
             showBookingMessage("Completa tutti i dati della prenotazione.");
             return;
         }
 
-        apiRequest("/bookings", {
+        apiRequest("/bookings", { // spedisce tutto al server. Chiamata API: POST /api/bookings
             method: "POST",
             body: {
                 petId,
@@ -903,12 +937,18 @@ $(document).ready(function () {
                 notes: $("#bookingNotes").val()
             }
         }).done(function (response) {
-            bootstrap.Modal.getOrCreateInstance(document.getElementById("bookingModal")).hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("bookingModal")).hide(); // Chiude la finestra di compilazione:
+
+            // Prepara il testo della finestra di conferma
             $("#bookingResultBody").html(`
                 <p class="mb-2">La richiesta è stata inviata al sitter.</p>
                 <p class="mb-0 text-muted">Potrai pagare dalla dashboard dopo l'accettazione.</p>
             `);
+
+            // Apre a schermo il Modale 2 di successo
             bootstrap.Modal.getOrCreateInstance(document.getElementById("bookingResultModal")).show();
+
+            // Ricarica la lista dei sitter
             loadSitters(currentFilters());
         }).fail(function (xhr) {
             showBookingMessage(xhr.responseJSON?.error || "Errore durante la prenotazione.");

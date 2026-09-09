@@ -524,7 +524,7 @@ async function listSitters(req, res, next) {
     const { city, petType, service } = req.query;
 
     const values = [];
-    const conditions = ["u.role = 'sitter'"];
+    const conditions = ["u.role = 'sitter'", "u.is_active = true"];
 
     if (city) {
       values.push(`%${city}%`);

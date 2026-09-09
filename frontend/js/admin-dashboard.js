@@ -200,7 +200,7 @@ function renderAdminBookings(bookings, append) {
     $("#loadMoreAdminBookings").toggleClass("d-none", !bookingsHasMore);
 }
 
-function loadAdminBookings(append = false) {
+function loadAdminBookings(append = false) { // quando viene schiacciato pulsante mostra altri append passato è true e l'offset non viene inizializzato l'offset
     if (!append) {
         bookingsOffset = 0;
         $("#adminBookingsList").html('<p class="text-muted mb-0">Caricamento prenotazioni...</p>');
@@ -308,7 +308,7 @@ function updateSitterVerification(sitterId, verified) {
 }
 
 function deleteUser(userId, userName) {
-    if (!confirm(`Eliminare ${userName}? L'utente non potrà più accedere.`)) {
+    if (!confirm(`Eliminare ${userName}? Le prenotazioni attive verranno annullate, gli eventuali pagamenti rimborsati e lo storico verrà conservato.`)) {
         return;
     }
     $.ajax({
@@ -316,8 +316,8 @@ function deleteUser(userId, userName) {
         method: "DELETE",
         headers: adminHeaders(),
         success: refreshAdminData,
-        error: function () {
-            alert("Errore durante l'eliminazione dell'utente.");
+        error: function (xhr) {
+            alert(xhr.responseJSON?.error || "Errore durante l'eliminazione dell'utente.");
         }
     });
 }
