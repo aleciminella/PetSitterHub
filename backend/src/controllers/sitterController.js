@@ -384,6 +384,10 @@ function cleanAvailabilityExceptionItem(item) {
   };
 }
 
+function availabilityExceptionsOverlap(first, second) {
+  return first.startsOn <= second.endsOn && first.endsOn >= second.startsOn;
+}
+
 async function updateMyWeeklyAvailability(req, res, next) {
   const client = await pool.connect();
 
@@ -476,6 +480,16 @@ async function updateMyAvailabilityExceptions(req, res, next) {
     if (cleanedExceptions.some((item) => item === null)) {
       return res.status(400).json({
         error: "Data o orario speciale non valido"
+      });
+    }
+
+    const hasOverlap = cleanedExceptions.some((exception, index) => (
+      cleanedExceptions.slice(index + 1).some((other) => availabilityExceptionsOverlap(exception, other))
+    ));
+
+    if (hasOverlap) {
+      return res.status(409).json({
+        error: "Per questa data è già impostata una chiusura o un orario speciale"
       });
     }
 
