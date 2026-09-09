@@ -515,14 +515,24 @@ function addAvailabilityException(event) {
     event.preventDefault();
     hideMessage("#availabilityMessage");
     const isSpecial = $("#exceptionType").val() === "special";
-    availabilityExceptions.push({
+    const newException = {
         startsOn: $("#exceptionStartsOn").val(),
         endsOn: $("#exceptionEndsOn").val(),
         isAvailable: isSpecial,
         startsAt: isSpecial ? $("#exceptionStartsAt").val() : null,
         endsAt: isSpecial ? $("#exceptionEndsAt").val() : null,
         note: $("#exceptionNote").val()
+    };
+    const overlapsExisting = availabilityExceptions.some(function (exception) {
+        return newException.startsOn <= exception.endsOn && newException.endsOn >= exception.startsOn;
     });
+
+    if (overlapsExisting) {
+        showMessage("#availabilityMessage", "danger", "Per questa data è già impostata una chiusura o un orario speciale.");
+        return;
+    }
+
+    availabilityExceptions.push(newException);
     $("#exceptionForm")[0].reset();
     saveAvailabilityExceptions();
 }
@@ -906,6 +916,10 @@ $(document).ready(function () {
     $("#servicesForm").on("submit", saveServices);
     $("#refreshServicesButton").on("click", loadServices);
     $("#refreshAvailabilityButton").on("click", loadAvailability);
+
+    $("#sitterServicesList").on("input change", ".service-enabled-input, .service-price-input", function () {
+        hideMessage("#servicesMessage");
+    });
 
     $("#sitterServicesList").on("click", ".sitter-service-tab", function () {
         const button = $(this);

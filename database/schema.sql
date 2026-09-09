@@ -118,7 +118,6 @@ create table bookings (
   updated_at timestamptz not null default now(),
   foreign key (pet_id, owner_id) references pets(id, owner_id), -- impedisce di prenotare un servizio indicando un animale appartenente a un altro utente
   foreign key (pet_id, pet_type) references pets(id, species), -- assicura che il pet_type salvato nella prenotazione corrisponda alla vera specie dell'animale
-  foreign key (sitter_id, service_id, pet_type) references sitter_services(sitter_id, service_id, pet_type), -- verifica che il sitter offra effettivamente quel preciso servizio per quella specifica specie animale.
   check (ends_at > starts_at) -- impedisce date di fine antecedenti all'inizio
 );
 

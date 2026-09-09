@@ -5,6 +5,7 @@ const {
   hasActiveDuplicateBooking,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
+  hasInvalidTimedServiceDuration,
   hasPastStart,
   isSitterAvailable
 } = require("../services/bookingService");
@@ -216,6 +217,12 @@ async function createBooking(req, res, next) {
       });
     }
 
+    if (hasInvalidTimedServiceDuration(startsAt, endsAt, service.availability_mode)) {
+      return res.status(400).json({
+        error: "La durata del servizio deve essere di un'ora"
+      });
+    }
+
     const hasDuplicate = await hasActiveDuplicateBooking(
       req.user.id,
       petId,
@@ -320,6 +327,12 @@ async function quoteBooking(req, res, next) {
     if (!service) {
       return res.status(400).json({
         error: "Animale, sitter o servizio non compatibili"
+      });
+    }
+
+    if (hasInvalidTimedServiceDuration(startsAt, endsAt, service.availability_mode)) {
+      return res.status(400).json({
+        error: "La durata del servizio deve essere di un'ora"
       });
     }
 

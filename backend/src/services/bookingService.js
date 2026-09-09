@@ -37,6 +37,14 @@ function hasInvalidDates(startsAt, endsAt) {
     || !hasValidSlot(end);
 }
 
+function hasInvalidTimedServiceDuration(startsAt, endsAt, availabilityMode) {
+  if (availabilityMode !== "hourly_slot" && availabilityMode !== "fixed_slot") {
+    return false;
+  }
+
+  return new Date(endsAt).getTime() - new Date(startsAt).getTime() !== SLOT_MINUTES * 60 * 1000;
+}
+
 
 
 function hasPastStart(startsAt) {
@@ -48,10 +56,9 @@ function hasPastStart(startsAt) {
 
 
 
-function hasValidSlot(date) { // controlla che le prenotazioni non abbiano orari strani ma devono essere ore tonde spaccate
+function hasValidSlot(date) { // gli slot possono partire dai minuti configurati dal sitter, ma non avere secondi o millisecondi
   return date.getSeconds() === 0
-    && date.getMilliseconds() === 0
-    && date.getMinutes() % SLOT_MINUTES === 0;
+    && date.getMilliseconds() === 0;
 }
 
 
@@ -410,6 +417,7 @@ module.exports = {
   hasActiveDuplicateBooking,
   hasAcceptedBookingOverlap,
   hasInvalidDates,
+  hasInvalidTimedServiceDuration,
   hasPastStart,
   isSitterAvailable,
   listAvailableSlots,
