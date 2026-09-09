@@ -25,7 +25,7 @@ Esempio di login:
 ```bash
 curl -X POST http://localhost:4000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"mario.rossi@example.com","password":"password123"}'
+  -d '{"email":"mario.owner@example.com","password":"password123"}'
 ```
 
 La risposta contiene un campo `token`. Copiare quel valore e usarlo nell'header `Authorization`.
@@ -91,9 +91,10 @@ curl -X DELETE http://localhost:4000/api/pets/1 \
 Account demo utili:
 
 ```text
-Proprietario: mario.rossi@example.com / password123
+Proprietario: mario.owner@example.com / password123
 Sitter: giulia.sitter@example.com / password123
-Admin: admin@example.com / password123
+Sitter: luca.sitter@example.com / password123
+Admin: admin@petsitterhub.it / password123
 ```
 
 Nota: con Docker non viene usato il PostgreSQL locale, ma il database del container. Per l'avvio completo con Docker consultare il README principale.
@@ -101,7 +102,7 @@ Nota: con Docker non viene usato il PostgreSQL locale, ma il database del contai
 
 ## Test automatici
 
-I test automatici backend usano il test runner integrato di Node.js e controllano alcune API reali: health check, servizi, sitter, login, permessi per ruolo e CRUD animali.
+I tre test automatici backend usano il test runner integrato di Node.js e controllano le API pubbliche, autenticazione e ruoli, quindi il flusso di una prenotazione dalla richiesta al pagamento.
 
 Prima di lanciarli deve essere raggiungibile il database indicato in `backend/.env`.
 
@@ -140,17 +141,17 @@ Body JSON:
   "firstName": "Mario",
   "lastName": "Rossi",
   "role": "owner",
-  "phone": "3331234567",
   "city": "Roma"
 }
 ```
+
+Tutti i campi mostrati sono obbligatori. Se il ruolo è `sitter`, durante la registrazione viene creato anche il profilo sitter usando `city` come città base.
 
 Ruoli ammessi:
 
 ```text
 owner
 sitter
-admin
 ```
 
 Risposte principali:
@@ -640,3 +641,14 @@ Il proprietario può annullare una propria prenotazione se non è già chiusa.
 PATCH http://localhost:4000/api/bookings/:id/cancel
 Authorization: Bearer <token_owner>
 ```
+
+### Promozione ad amministratore
+
+Un amministratore può promuovere un altro utente:
+
+```http
+PATCH http://localhost:4000/api/admin/users/:id/promote-admin
+Authorization: Bearer <token_admin>
+```
+
+La promozione restituisce `409` e non modifica il ruolo se l'utente ha richieste `pending` oppure prenotazioni `accepted` non ancora terminate.

@@ -285,27 +285,66 @@ async function deleteUser(req, res, next) {
 }
 
 async function promoteUserToAdmin(req, res, next) {
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
-      `update users
-       set role = 'admin'
+    await client.query("begin");
+
+    const userResult = await client.query(
+      `select id
+       from users
        where id = $1
          and is_active = true
-       returning id, email, first_name, last_name, role, phone, city, created_at`,
+       for update`,
       [req.params.id]
     );
 
-    if (result.rows.length === 0) {
+    if (userResult.rows.length === 0) {
+      await client.query("rollback");
       return res.status(404).json({
         error: "Utente non trovato"
       });
     }
 
+    const activeBookingsResult = await client.query(
+      `select exists (
+         select 1
+         from bookings b
+         join sitter_profiles sp on sp.id = b.sitter_id
+         where (b.owner_id = $1 or sp.user_id = $1)
+           and (
+             b.status = 'pending'
+             or (b.status = 'accepted' and b.ends_at >= now())
+           )
+       ) as has_active_bookings`,
+      [req.params.id]
+    );
+
+    if (activeBookingsResult.rows[0].has_active_bookings) {
+      await client.query("rollback");
+      return res.status(409).json({
+        error: "Non è possibile promuovere questo utente: sono presenti prenotazioni ancora attive"
+      });
+    }
+
+    const result = await client.query(
+      `update users
+       set role = 'admin'
+       where id = $1
+       returning id, email, first_name, last_name, role, phone, city, created_at`,
+      [req.params.id]
+    );
+
+    await client.query("commit");
+
     return res.json({
       user: result.rows[0]
     });
   } catch (err) {
+    await client.query("rollback");
     return next(err);
+  } finally {
+    client.release();
   }
 }
 

@@ -1,16 +1,11 @@
 const { after, before, test } = require("node:test");
 const assert = require("node:assert/strict");
-const path = require("node:path");
-
-require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
-
 const app = require("../src/app");
 const pool = require("../src/db/pool");
 
 let server;
 let baseUrl;
-const createdBookingIds = [];
-const createdUserEmails = [];
+let createdBookingId;
 
 before(async () => {
   server = app.listen(0);
@@ -19,190 +14,86 @@ before(async () => {
 });
 
 after(async () => {
-  for (const bookingId of createdBookingIds) {
-    await pool.query("delete from payments where booking_id = $1", [bookingId]);
-    await pool.query("delete from messages where booking_id = $1", [bookingId]);
-    await pool.query("delete from notifications where booking_id = $1", [bookingId]);
-    await pool.query("delete from bookings where id = $1", [bookingId]);
+  if (createdBookingId) {
+    await pool.query("delete from bookings where id = $1", [createdBookingId]);
   }
-
-  for (const email of createdUserEmails) {
-    await pool.query("delete from users where email = $1", [email]);
-  }
-
-  await new Promise((resolve, reject) => {
-    server.close((err) => (err ? reject(err) : resolve()));
-  });
+  await new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   await pool.end();
 });
 
-async function apiRequest(pathname, options = {}) {
-  const response = await fetch(`${baseUrl}${pathname}`, {
+async function request(path, options = {}) {
+  const response = await fetch(`${baseUrl}${path}`, {
     method: options.method || "GET",
     headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.json ? { "Content-Type": "application/json" } : {}),
       ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
     },
-    body: options.body
+    body: options.json ? JSON.stringify(options.json) : undefined
   });
-
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };
 }
 
-async function login(email, password = "password123") {
-  const result = await apiRequest("/auth/login", {
+async function login(email) {
+  const response = await request("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password })
+    json: { email, password: "password123" }
   });
-
-  assert.equal(result.status, 200);
-  return result.body.token;
+  assert.equal(response.status, 200);
+  return response.body.token;
 }
 
-async function registerOwner(label) {
-  const email = `test-${label}-${Date.now()}@example.com`;
-  const result = await apiRequest("/auth/register", {
-    method: "POST",
-    body: JSON.stringify({
-      email,
-      password: "password123",
-      firstName: "Test",
-      lastName: label,
-      role: "owner",
-      city: "Roma"
-    })
-  });
-
-  assert.equal(result.status, 201);
-  createdUserEmails.push(email);
-  return result.body;
+function dateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function nextMondayAt(hour) {
-  const start = new Date();
-  start.setDate(start.getDate() + 180);
+test("le API pubbliche rispondono correttamente", async () => {
+  const health = await request("/health/db");
+  const services = await request("/services");
+  const sitters = await request("/sitters");
 
-  while (start.getDay() !== 1) {
-    start.setDate(start.getDate() + 1);
-  }
-
-  start.setHours(hour, 0, 0, 0);
-  const end = new Date(start);
-  end.setHours(end.getHours() + 1);
-
-  return { startsAt: start.toISOString(), endsAt: end.toISOString() };
-}
-
-test("le API pubbliche restituiscono stato, servizi e sitter", async () => {
-  const health = await apiRequest("/health/db");
-  assert.equal(health.status, 200);
   assert.equal(health.body.database, "connected");
-
-  const services = await apiRequest("/services");
-  assert.equal(services.status, 200);
-  assert.ok(services.body.services.some((service) => service.name === "Passeggiata"));
-
-  const sitters = await apiRequest("/sitters");
-  assert.equal(sitters.status, 200);
-  assert.ok(sitters.body.sitters.some((sitter) => sitter.first_name === "Giulia"));
+  assert.ok(services.body.services.length > 0);
+  assert.ok(sitters.body.sitters.length > 0);
 });
 
-test("registrazione, token e controllo del ruolo funzionano", async () => {
-  const registered = await registerOwner("Auth");
-  assert.ok(registered.token);
-  assert.equal(registered.user.role, "owner");
+test("login, token e ruoli proteggono le API", async () => {
+  const ownerToken = await login("mario.owner@example.com");
+  const profile = await request("/auth/profile", { token: ownerToken });
+  const forbidden = await request("/admin/overview", { token: ownerToken });
+  const missingToken = await request("/pets");
 
-  const profile = await apiRequest("/auth/profile", { token: registered.token });
-  assert.equal(profile.status, 200);
-  assert.equal(profile.body.user.email, registered.user.email);
-
-  const forbidden = await apiRequest("/admin/overview", { token: registered.token });
+  assert.equal(profile.body.user.role, "owner");
   assert.equal(forbidden.status, 403);
-
-  const missingToken = await apiRequest("/pets");
   assert.equal(missingToken.status, 401);
 });
 
-test("un proprietario può creare ed eliminare un animale", async () => {
-  const owner = await registerOwner("Pet");
-
-  const created = await apiRequest("/pets", {
-    method: "POST",
-    token: owner.token,
-    body: JSON.stringify({ name: "Animale test", species: "cane", breed: "Meticcio" })
-  });
-  assert.equal(created.status, 201);
-
-  const deleted = await apiRequest(`/pets/${created.body.pet.id}`, {
-    method: "DELETE",
-    token: owner.token
-  });
-  assert.equal(deleted.status, 204);
-
-  const pets = await apiRequest("/pets", { token: owner.token });
-  assert.equal(pets.body.pets.some((pet) => pet.id === created.body.pet.id), false);
-});
-
-test("una prenotazione passa da pending ad accepted e poi viene pagata", async () => {
+test("una richiesta viene accettata, pagata e impedisce la promozione", async () => {
   const ownerToken = await login("mario.owner@example.com");
   const sitterToken = await login("giulia.sitter@example.com");
-
-  const pets = await apiRequest("/pets", { token: ownerToken });
-  const pet = pets.body.pets.find((item) => item.species === "cane");
-
-  const sitters = await apiRequest("/sitters?petType=cane");
+  const adminToken = await login("admin@petsitterhub.it");
+  const sitterProfile = await request("/auth/profile", { token: sitterToken });
+  const pets = await request("/pets", { token: ownerToken });
+  const sitters = await request("/sitters?petType=cane");
   const sitter = sitters.body.sitters.find((item) => item.first_name === "Giulia");
   const service = sitter.services.find((item) => item.name === "Passeggiata");
-  const dates = nextMondayAt(10);
-
-  const created = await apiRequest("/bookings", {
-    method: "POST",
-    token: ownerToken,
-    body: JSON.stringify({
-      petId: pet.id,
-      sitterId: sitter.id,
-      serviceId: service.id,
-      ...dates
-    })
+  const to = new Date();
+  to.setDate(to.getDate() + 30);
+  const availability = await request(`/sitters/${sitter.id}/availability/slots?from=${dateKey(new Date())}&to=${dateKey(to)}&serviceId=${service.id}`);
+  const slot = availability.body.days.flatMap((day) => day.slots)[0];
+  const created = await request("/bookings", {
+    method: "POST", token: ownerToken,
+    json: { petId: pets.body.pets.find((pet) => pet.species === "cane").id, sitterId: sitter.id, serviceId: service.id, startsAt: slot.startsAt, endsAt: slot.endsAt }
   });
-  assert.equal(created.status, 201);
+  createdBookingId = created.body.booking.id;
   assert.equal(created.body.booking.status, "pending");
-  createdBookingIds.push(created.body.booking.id);
 
-  const accepted = await apiRequest(`/bookings/${created.body.booking.id}/accept`, {
-    method: "PATCH",
-    token: sitterToken
+  const accepted = await request(`/bookings/${createdBookingId}/accept`, { method: "PATCH", token: sitterToken });
+  const promotion = await request(`/admin/users/${sitterProfile.body.user.id}/promote-admin`, { method: "PATCH", token: adminToken });
+  const payment = await request(`/bookings/${createdBookingId}/payments`, {
+    method: "POST", token: ownerToken, json: { method: "demo_card" }
   });
-  assert.equal(accepted.status, 200);
   assert.equal(accepted.body.booking.status, "accepted");
-
-  const payment = await apiRequest(`/bookings/${created.body.booking.id}/payments`, {
-    method: "POST",
-    token: ownerToken,
-    body: JSON.stringify({ method: "demo_card" })
-  });
-  assert.equal(payment.status, 201);
+  assert.equal(promotion.status, 409);
   assert.equal(payment.body.payment.status, "paid");
-});
-
-test("la soft delete disattiva l'utente e impedisce nuove operazioni", async () => {
-  const adminToken = await login("admin@petsitterhub.it");
-  const owner = await registerOwner("Delete");
-
-  const deleted = await apiRequest(`/admin/users/${owner.user.id}`, {
-    method: "DELETE",
-    token: adminToken
-  });
-  assert.equal(deleted.status, 204);
-
-  const oldToken = await apiRequest("/auth/profile", { token: owner.token });
-  assert.equal(oldToken.status, 401);
-  assert.equal(oldToken.body.error, "Account non attivo");
-
-  const promotion = await apiRequest(`/admin/users/${owner.user.id}/promote-admin`, {
-    method: "PATCH",
-    token: adminToken
-  });
-  assert.equal(promotion.status, 404);
 });

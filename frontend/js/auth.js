@@ -49,8 +49,7 @@ $(document).ready(function () {
             email: $("#email").val(),
             password: $("#password").val(),
             role: $("#role").val(),
-            city: $("#city").val(),
-            phone: $("#phone").val()
+            city: $("#city").val()
         };
 
         $.ajax({ // manda la chiamata al backend

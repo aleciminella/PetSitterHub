@@ -5,10 +5,13 @@ const { createToken } = require("../middleware/authMiddleware");
 const allowedRegistrationRoles = ["owner", "sitter"]; // un utente che si iscrive può essere solo owner o sitter
 
 async function register(req, res, next) {
-  try {
-    const { email, password, firstName, lastName, role, phone, city } = req.body; // Estrae i dati dal corpo della richiesta inviata dal browser (req.body)
+  let client;
+  let transactionStarted = false;
 
-    if (!email || !password || !firstName || !lastName || !role) { // Se manca anche solo uno dei campi obbligatori, blocca subito tutto con codice 400 Bad Request (Richiesta errata)
+  try {
+    const { email, password, firstName, lastName, role, city } = req.body; // Estrae i dati dal corpo della richiesta inviata dal browser (req.body)
+
+    if (!email || !password || !firstName || !lastName || !role || !city || city.trim().length === 0) { // Se manca anche solo uno dei campi obbligatori, blocca subito tutto con codice 400 Bad Request (Richiesta errata)
       return res.status(400).json({
         error: "Mancano campi richiesti"
       });
@@ -22,22 +25,40 @@ async function register(req, res, next) {
 
     const passwordHash = await bcrypt.hash(password, 10); // crittografia della password prima di inserirla nel db
 
-
     // per evitare SQL Injection (prende dati dall'array e li mette con $)
-    const result = await pool.query(
-      `insert into users (email, password_hash, first_name, last_name, role, phone, city)
-       values ($1, $2, $3, $4, $5, $6, $7)
+    client = await pool.connect();
+    await client.query("begin");
+    transactionStarted = true;
+
+    const result = await client.query(
+      `insert into users (email, password_hash, first_name, last_name, role, city)
+       values ($1, $2, $3, $4, $5, $6)
        returning id, email, first_name, last_name, role, phone, city, created_at`,
-      [email, passwordHash, firstName, lastName, role, phone || null, city || null]
+      [email, passwordHash, firstName, lastName, role, city.trim()]
     );
 
     const user = result.rows[0]; // scheda utente
+
+    if (role === "sitter") {
+      await client.query(
+        `insert into sitter_profiles (user_id, base_city)
+         values ($1, $2)`,
+        [user.id, user.city]
+      );
+    }
+
+    await client.query("commit");
+    transactionStarted = false;
 
     return res.status(201).json({ // trasforma i dati (scheda utente e token) in formato json e li spedisce al browser
       user,
       token: createToken(user)
     });
   } catch (err) {
+    if (transactionStarted) {
+      await client.query("rollback");
+    }
+
     if (err.code === "23505") { // codice PostgreSQL che indica doppione
       return res.status(409).json({
         error: "Email già registrata"
@@ -45,6 +66,10 @@ async function register(req, res, next) {
     }
 
     return next(err);
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 }
 
